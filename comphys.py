@@ -20,12 +20,15 @@ def excitons1b():
     grid = np.linspace(0, 10, 1000)
     turning_points = np.zeros(len(grid))
     for n, energy in enumerate(energies):
-        turning_points[n] = shooting.outer_turning_point_newton(lambda x: 0.5*x**2, energy, grid, 100)
+        turning_points[n] = grid[shooting.outer_turning_point_newton(lambda x: 0.5*x**2, energy, grid, 100)]
     ax.plot(energies, turning_points)
     ax.set_xlabel(r"\lambda")
     ax.set_ylabel("Turning point")
     ax.grid()
     plt.show()
+
+def excitons1c():
+    pass
 
 
 if __name__ == "__main__":
