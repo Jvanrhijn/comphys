@@ -78,7 +78,7 @@ def solve_equation_forward(solution_first, solution_second, grid, potential, ene
     :param grid: the grid to solve the equation on
     :param potential: the potential function to solve the equation for
     :param energy: the energy eigenvalue to solve the equation for
-    :return: solution (np.ndarray) obtained by forward propagation
+    :return: solution (numpy array) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[0], solution[1] = solution_first, solution_second
@@ -108,19 +108,39 @@ def solve_equation_backward(solution_last, solution_second_last, grid, potential
     return solution
 
 
-def glue_arrays_together(first_half, second_half, at_index, priority=1) -> np.ndarray:
+def glue_arrays_together(first_half, second_half, at_index, overwrite=1) -> np.ndarray:
+    """Glue two overlapping arrays together at a given index
+
+    :param first_half: first half of array
+    :param second_half: second of of array
+    :param at_index: index to glue the arrays together at
+    :param overwrite: if there is overlap, overwrite entries of this array
+    :return: array obtained by gluing the two together
+    """
     assert(len(first_half) == len(second_half))
-    if priority != 1 and priority != 2:
+    if overwrite != 1 and overwrite != 2:
         raise(ValueError("Priority kwarg must be either '1' or '2'"))
     length = len(first_half)
-    if priority == 1:
+    if overwrite == 1:
         for n in range(at_index + 1, length):
             first_half[n] = second_half[n]
         return first_half
-    elif priority == 2:
+    elif overwrite == 2:
         for n in range(length - 1, -1, -1):
             second_half[n] = first_half[n]
         return second_half
+
+
+def normalize_solution(grid, solution) -> np.ndarray:
+    """Normalize wave function
+
+    :param grid: grid to integrate on
+    :param solution: non-normalized solution of differential equation
+    :return: normalized solution
+    """
+    integral = np.trapz(solution**2, grid)
+    solution /= np.sqrt(integral)
+    return solution
 
 
 class ShootingTest(unittest.TestCase):
@@ -158,10 +178,16 @@ class ShootingTest(unittest.TestCase):
         first = np.array([1, 2, 3, 4, 0, 0, 0, 0, 0, 0])
         second = np.array([0, 0, 3, 4, 5, 6, 7, 8, 9, 10])
         np.testing.assert_equal(glue_arrays_together(first, second, 3), np.arange(1, 11))
+        np.testing.assert_equal(glue_arrays_together(first, second, 3, overwrite=2), np.arange(1, 11))
         with self.assertRaises(AssertionError):
             glue_arrays_together(np.array([0, 1, 2]), np.array([0, 1]), 1)
         with self.assertRaises(ValueError):
-            glue_arrays_together(np.array([0, 1, 2]), np.array([-1, 1, 0]), 1, priority=3)
+            glue_arrays_together(np.array([0, 1, 2]), np.array([-1, 1, 0]), 1, overwrite=3)
+
+    def test_normalization(self):
+        x_axis = np.linspace(0, 1, 100)
+        func = x_axis**2
+        self.assertAlmostEqual(np.trapz(normalize_solution(x_axis, func)**2, x_axis), 1)
 
 
 if __name__ == '__main__':
