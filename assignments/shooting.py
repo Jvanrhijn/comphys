@@ -55,7 +55,7 @@ def excitons1c():
     # Normalize solution
     solution = shooting.normalize_solution(grid, solution)
     # Plot both solutions and analytic solution
-    fig, ax = plt.subplots(2, sharex=True)
+    fig, ax = plt.subplots(2, sharex='all')
     ax[0].plot(grid[0:turning_point+1], solution[0:turning_point+1], label="Forward solution")
     ax[0].plot(grid[turning_point:], solution[turning_point:], label="Backward solution")
     ax[1].set_xlabel(r"$\rho$")
