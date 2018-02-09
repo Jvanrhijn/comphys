@@ -66,8 +66,9 @@ def solution_next_numerov(previous, pprevious, potential, energy, step_size, *gr
     :return: value of solution at next (backward) grid point
     """
     assert(step_size > 0)
-    next_value = (5*step_size**2/6*(potential(grid_points[0]) - energy) + 2)*previous - (1 - step_size**2/12
-                                * (potential(grid_points[1]) - energy))*pprevious
+    next_value = (5*step_size**2/6*(potential(grid_points[0]) - energy) + 2)*previous - (
+            1 - step_size**2/12
+            * (potential(grid_points[1]) - energy))*pprevious
     next_value /= 1 - step_size**2/12*(potential(grid_points[1]) - energy)
     return next_value
 
@@ -108,7 +109,7 @@ def solve_equation_backward(solution_last, solution_second_last, grid, potential
     :param energy: the energy eigenvalue to solve the equation for
     :param turning_point_index: index of turning point in grid
     :param numerov: use Numerov's algorithm for propagation, defaults to False (which uses Euler's algorithm)
-    :return: solution (np.ndarray) obtained by forward propagation
+    :return: solution (numpy array) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[-1], solution[-2] = solution_last, solution_second_last
@@ -134,7 +135,7 @@ def glue_arrays_together(first_half, second_half, at_index, overwrite=1) -> np.n
     """
     assert(len(first_half) == len(second_half))
     if overwrite != 1 and overwrite != 2:
-        raise(ValueError("Priority kwarg must be either '1' or '2'"))
+        raise(ValueError("Overwrite kwarg must be either '1' or '2'"))
     length = len(first_half)
     if overwrite == 1:
         for n in range(at_index + 1, length):
@@ -144,7 +145,6 @@ def glue_arrays_together(first_half, second_half, at_index, overwrite=1) -> np.n
         for n in range(length - 1, -1, -1):
             second_half[n] = first_half[n]
         return second_half
-
 
 
 def normalize_solution(grid, solution) -> np.ndarray:
