@@ -29,8 +29,8 @@ def excitons1c():
     eigenvalue_guess = 1.5
     # Set up equidistant grid
     grid_points = 100
-    grid_displacement = 0.01
-    grid_end = 6
+    grid_displacement = 0
+    grid_end = 5
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
     # Calculate analytic solution
     analytic_solution = grid*np.exp(-grid**2/4)

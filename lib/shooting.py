@@ -38,39 +38,42 @@ def find_root_newton(function, iterations, initial_guess, dx=0.0001) -> float:
     return current
 
 
-def solution_forward_next(grid_point, previous, pprevious, potential, energy, step_size) -> float:
-    """Propagate forward solution
+def solution_next(previous, pprevious, potential, energy, step_size, *grid_points) -> float:
+    """Propagate solution
 
-    :param grid_point: previous grid point
     :param previous: previous value of solution ('n')
     :param pprevious: previous previous value of solution ('n-1')
     :param potential: effective potential energy function ('W')
     :param energy: energy eigenvalue ('lambda')
     :param step_size: step size ('h')
+    :param grid_points: grid points needed for algorithm, in this case only the current point is needed
     :return: value of solution at next grid point
     """
     assert(step_size > 0)
-    next_value = 2*previous - pprevious + step_size**2*(potential(grid_point) - energy)*previous
+    next_value = 2*previous - pprevious + step_size**2*(potential(grid_points[0]) - energy)*previous
     return next_value
 
 
-def solution_backward_next(grid_point, previous, pprevious, potential, energy, step_size) -> float:
-    """Propagate backward solution
+def solution_next_numerov(previous, pprevious, potential, energy, step_size, *grid_points) -> float:
+    """Propagate backward solution using Numerov's algorithm
 
-    :param grid_point: previous grid point
     :param previous: previous value of solution ('n')
     :param pprevious: previous previous value of solution ('n-1')
     :param potential: effective potential energy function ('W')
     :param energy: energy eigenvalue ('lambda')
     :param step_size: step size ('h')
+    :param grid_points: grid points needed for algorithm, in this case the current and previous grid point is needed
     :return: value of solution at next (backward) grid point
     """
     assert(step_size > 0)
-    next_value = 2*previous - pprevious + step_size**2*(potential(grid_point) - energy)*previous
+    next_value = (5*step_size**2/6*(potential(grid_points[0]) - energy) + 2)*previous - (1 - step_size**2/12
+                                * (potential(grid_points[1]) - energy))*pprevious
+    next_value /= 1 - step_size**2/12*(potential(grid_points[1]) - energy)
     return next_value
 
 
-def solve_equation_forward(solution_first, solution_second, grid, potential, energy, turning_point_index) -> np.ndarray:
+def solve_equation_forward(solution_first, solution_second, grid, potential, energy, turning_point_index,
+                           numerov=False) -> np.ndarray:
     """Solves the differential equation by forward propagation
 
     :param solution_first: the solution at the first grid point
@@ -79,18 +82,23 @@ def solve_equation_forward(solution_first, solution_second, grid, potential, ene
     :param potential: the potential function to solve the equation for
     :param energy: the energy eigenvalue to solve the equation for
     :param turning_point_index: index of turning point in grid
+    :param numerov: use numerov's algorithm for propagation, defaults to False (which uses Euler's algorithm)
     :return: solution (numpy array) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[0], solution[1] = solution_first, solution_second
+    if numerov:
+        propagate = solution_next_numerov
+    else:
+        propagate = solution_next
     for n in range(2, turning_point_index + 2):
         step_size = grid[n] - grid[n-1]
-        solution[n] = solution_forward_next(grid[n-1], solution[n-1], solution[n-2], potential, energy, step_size)
+        solution[n] = propagate(solution[n-1], solution[n-2], potential, energy, step_size, grid[n-1], grid[n-2])
     return solution
 
 
-def solve_equation_backward(solution_last, solution_second_last, grid, potential, energy, turning_point_index)\
-        -> np.ndarray:
+def solve_equation_backward(solution_last, solution_second_last, grid, potential, energy, turning_point_index,
+                            numerov=False) -> np.ndarray:
     """Solves the differential equation by backward propagation
 
     :param solution_last: value of solution at end point
@@ -99,13 +107,19 @@ def solve_equation_backward(solution_last, solution_second_last, grid, potential
     :param potential: the potential function to solve the equation for
     :param energy: the energy eigenvalue to solve the equation for
     :param turning_point_index: index of turning point in grid
+    :param numerov: use Numerov's algorithm for propagation, defaults to False (which uses Euler's algorithm)
     :return: solution (np.ndarray) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[-1], solution[-2] = solution_last, solution_second_last
+    # Choose algorithm
+    if numerov:
+        propagate = solution_next_numerov
+    else:
+        propagate = solution_next
     for n in range(len(grid) - 3, turning_point_index - 2, -1):
-        step_size = abs(grid[n] - grid[n-1])
-        solution[n] = solution_backward_next(grid[n], solution[n+1], solution[n+2], potential, energy, step_size)
+        step_size = grid[n] - grid[n-1]
+        solution[n] = propagate(solution[n+1], solution[n+2], potential, energy, step_size, grid[n+1], grid[n+2])
     return solution
 
 
@@ -130,6 +144,7 @@ def glue_arrays_together(first_half, second_half, at_index, overwrite=1) -> np.n
         for n in range(length - 1, -1, -1):
             second_half[n] = first_half[n]
         return second_half
+
 
 
 def normalize_solution(grid, solution) -> np.ndarray:
@@ -157,23 +172,14 @@ class ShootingTest(unittest.TestCase):
         self.assertEqual(outer_turning_point_newton(lambda x: x**2, 1, np.linspace(0, 10, 1000), 50), 100)
         self.assertEqual(outer_turning_point_newton(lambda x: x**3, 1.5, np.linspace(0, 10, 1000), 50), 114)
 
-    def test_solution_forward_next(self):
-        self.assertAlmostEqual(solution_forward_next(10, 0.1, 0.05, lambda x: 0.5*x**2, 1.5, 0.01), 0.150485, 4)
-        self.assertAlmostEqual(solution_forward_next(10, -0.1, -0.05, lambda x: 0.5*x**2, 1.5, 0.01), -0.150485, 4)
+    def test_solution_next(self):
+        self.assertAlmostEqual(solution_next(0.1, 0.05, lambda x: 0.5*x**2, 1.5, 0.01, 10), 0.150485, 4)
+        self.assertAlmostEqual(solution_next(-0.1, -0.05, lambda x: 0.5*x**2, 1.5, 0.01, 10), -0.150485, 4)
         with self.assertRaises(TypeError):
-            solution_forward_next(3, "foo", -0.05, lambda x: 0.5*x**2, 1.5, 0.01)
+            solution_next("foo", -0.05, lambda x: 0.5*x**2, 1.5, 0.01, 3)
         with self.assertRaises(AssertionError):
-            solution_forward_next(1, 1, 1, lambda x: x, 1, -0.01)
-        self.assertEqual(solution_forward_next(0, 0, 0, lambda x: x, 0, 0.01), 0)
-
-    def test_solution_backward_next(self):
-        self.assertAlmostEqual(solution_backward_next(10, 0.1, 0.05, lambda x: 0.5*x**2, 1.5, 0.01), 0.150485, 4)
-        self.assertAlmostEqual(solution_backward_next(10, -0.1, -0.05, lambda x: 0.5*x**2, 1.5, 0.01), -0.150485, 4)
-        with self.assertRaises(TypeError):
-            solution_backward_next(3, "foo", -0.05, lambda x: 0.5*x**2, 1.5, 0.01)
-        with self.assertRaises(AssertionError):
-            solution_backward_next(1, 1, 1, lambda x: x, 1, -0.01)
-        self.assertEqual(solution_backward_next(0, 0, 0, lambda x: x, 0, 0.01), 0)
+            solution_next(1, 1, lambda x: x, 1, -0.01, 1)
+        self.assertEqual(solution_next(0, 0, lambda x: x, 0, 0.01, 0), 0)
 
     def test_glue_together(self):
         first = np.array([1, 2, 3, 4, 0, 0, 0, 0, 0, 0])
