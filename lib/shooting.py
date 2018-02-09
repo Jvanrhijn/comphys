@@ -70,7 +70,7 @@ def solution_backward_next(grid_point, previous, pprevious, potential, energy, s
     return next_value
 
 
-def solve_equation_forward(solution_first, solution_second, grid, potential, energy) -> np.ndarray:
+def solve_equation_forward(solution_first, solution_second, grid, potential, energy, turning_point_index) -> np.ndarray:
     """Solves the differential equation by forward propagation
 
     :param solution_first: the solution at the first grid point
@@ -78,18 +78,19 @@ def solve_equation_forward(solution_first, solution_second, grid, potential, ene
     :param grid: the grid to solve the equation on
     :param potential: the potential function to solve the equation for
     :param energy: the energy eigenvalue to solve the equation for
+    :param turning_point_index: index of turning point in grid
     :return: solution (numpy array) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[0], solution[1] = solution_first, solution_second
-    turning_point_index = outer_turning_point_newton(potential, energy, grid, len(grid)//2)
     for n in range(2, turning_point_index + 2):
         step_size = grid[n] - grid[n-1]
         solution[n] = solution_forward_next(grid[n-1], solution[n-1], solution[n-2], potential, energy, step_size)
     return solution
 
 
-def solve_equation_backward(solution_last, solution_second_last, grid, potential, energy) -> np.ndarray:
+def solve_equation_backward(solution_last, solution_second_last, grid, potential, energy, turning_point_index)\
+        -> np.ndarray:
     """Solves the differential equation by backward propagation
 
     :param solution_last: value of solution at end point
@@ -97,11 +98,11 @@ def solve_equation_backward(solution_last, solution_second_last, grid, potential
     :param grid: grid to solve the equation on
     :param potential: the potential function to solve the equation for
     :param energy: the energy eigenvalue to solve the equation for
+    :param turning_point_index: index of turning point in grid
     :return: solution (np.ndarray) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[-1], solution[-2] = solution_last, solution_second_last
-    turning_point_index = outer_turning_point_newton(potential, energy, grid, len(grid)//2)
     for n in range(len(grid) - 3, turning_point_index - 2, -1):
         step_size = abs(grid[n] - grid[n-1])
         solution[n] = solution_backward_next(grid[n], solution[n+1], solution[n+2], potential, energy, step_size)
