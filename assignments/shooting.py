@@ -10,19 +10,12 @@ rc('text', usetex=True)
 
 @single_plot
 def excitons1b():
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
     energies = np.linspace(0, 10, 1000)
     grid = np.linspace(0, 10, 1000)
     turning_points = np.zeros(len(grid))
     for n, energy in enumerate(energies):
         turning_points[n] = grid[shooting.outer_turning_point_newton(lambda x: 0.25*x**2, energy, grid, 100)]
-    ax.plot(energies, turning_points)
-    ax.set_xlabel(r"\lambda")
-    ax.set_ylabel("Turning point")
-    ax.grid()
-    plt.show()
-    return grid, energies, r"$\lambda"
+    return energies, turning_points, r"$\lambda$", "Turning point"
 
 
 @plot_grid_show

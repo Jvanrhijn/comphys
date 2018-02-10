@@ -45,8 +45,8 @@ def single_plot(assignment):
         ax = fig.add_subplot(111)
         x, y, x_label, y_label = assignment()
         ax.plot(x, y, color='#1f77b4')
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
         ax.grid()
         plt.show()
     return wrapper
