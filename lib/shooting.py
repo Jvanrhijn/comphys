@@ -16,7 +16,7 @@ def outer_turning_point_newton(potential, energy, grid, guess) -> int:
     :param guess: initial guess for index, needed for Newton
     :return: index of turning point in grid
     """
-    dx = min(np.diff(grid))*0.001
+    dx = min(np.diff(grid))
     root = find_root_newton(lambda x: potential(x) - energy, 10, grid[guess], dx=dx)
     index = abs(grid - root).argmin()
     return index
@@ -62,7 +62,7 @@ def solution_next_numerov(previous, pprevious, potential, energy, step_size, *gr
     :param potential: effective potential energy function ('W')
     :param energy: energy eigenvalue ('lambda')
     :param step_size: step size ('h')
-    :param grid_points: grid points needed for algorithm, in this case the current and previous grid point is needed
+    :param grid_points: grid points needed for algorithm, in this case the current and previous grid point are needed
     :return: value of solution at next (backward) grid point
     """
     assert(step_size > 0)
@@ -159,6 +159,34 @@ def normalize_solution(grid, solution) -> np.ndarray:
     return solution
 
 
+def solve_equation(solution_first, solution_second, solution_last, solution_second_last, grid, potential, energy,
+                   turning_point_index, numerov=False) -> np.ndarray:
+    """Solve the differential equation on the entire grid
+
+    :param solution_first: first value of solution
+    :param solution_second: second value of solution
+    :param solution_last: last value of solution
+    :param solution_second_last: second last value of solution
+    :param grid: grid to solve equation on
+    :param potential: potential to solve equation for
+    :param energy: energy eigenvalue guess
+    :param turning_point_index: index of turning point in grid
+    :param numerov: whether to use numerov algorithm, defaults to False
+    :return: normalized numerical solution of radial Schrödinger equation on grid,
+    """
+    solution_forward = solve_equation_forward(solution_first, solution_second, grid, potential, energy,
+                                              turning_point_index, numerov=numerov)
+    solution_backward = solve_equation_backward(solution_last, solution_second_last, grid, potential, energy,
+                                                turning_point_index, numerov=numerov)
+    # Match forward & backward solutions
+    solution_forward /= solution_forward[turning_point_index]
+    solution_backward /= solution_backward[turning_point_index]
+    solution = glue_arrays_together(solution_forward, solution_backward, turning_point_index)
+    # Normalize
+    solution = normalize_solution(grid, solution)
+    return solution
+
+
 class ShootingTest(unittest.TestCase):
     """ Test cases for the functions in this module"""
     def test_find_root_newton(self):
@@ -194,7 +222,7 @@ class ShootingTest(unittest.TestCase):
     def test_normalization(self):
         x_axis = np.linspace(0, 1, 100)
         func = x_axis**2
-        self.assertAlmostEqual(np.trapz(normalize_solution(x_axis, func)**2, x_axis), 1)
+        self.assertAlmostEqual(np.trapz(normalize_solution(x_axis, func)**2, x_axis), 1, 5)
 
 
 if __name__ == '__main__':
