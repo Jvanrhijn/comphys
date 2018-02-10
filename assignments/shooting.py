@@ -1,12 +1,14 @@
 import sys
 import lib.shooting as shooting
 import numpy as np
+from decorators.decorators import *
 import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
+@single_plot
 def excitons1b():
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -20,8 +22,10 @@ def excitons1b():
     ax.set_ylabel("Turning point")
     ax.grid()
     plt.show()
+    return grid, energies, r"$\lambda"
 
 
+@plot_grid_show
 def excitons1c():
     def potential(x):
         return 0.25*x**2
@@ -56,20 +60,20 @@ def excitons1c():
     solution = shooting.normalize_solution(grid, solution)
     # Plot both solutions and analytic solution
     fig, ax = plt.subplots(2, sharex=True)
+    ax[0].plot(grid, analytic_solution, label="Analytic solution")
     ax[0].plot(grid[0:turning_point+1], solution[0:turning_point+1], label="Forward solution")
     ax[0].plot(grid[turning_point:], solution[turning_point:], label="Backward solution")
     ax[1].set_xlabel(r"$\rho$")
     ax[0].set_ylabel(r"$\zeta(\rho)$")
-    ax[0].plot(grid, analytic_solution, label="Analytic solution")
     ax[1].set_ylabel(r"$\zeta(\rho) - \zeta_{00}(\rho)$, $10^{-4}$")
     # Plot relative error
     error = solution - analytic_solution
     ax[1].plot(grid, error*10**4)
-    ax[0].grid(), ax[1].grid()
     ax[0].legend()
-    plt.show()
+    return ax
 
 
+@vertical_subplots
 def excitons2a():
     def potential(x):
         return 0.25*x**2
@@ -94,20 +98,5 @@ def excitons2a():
     solution_numerov = shooting.solve_equation(solution_first, solution_second, solution_last,
                                                solution_second_last, grid, potential, eigenvalue_guess,
                                                turning_point, numerov=True)
-    solution_naive = shooting.solve_equation(solution_first, solution_second, solution_last,
-                                               solution_second_last, grid, potential, eigenvalue_guess,
-                                               turning_point, numerov=False)
-    # Plot both solutions and analytic solution
-    fig, ax = plt.subplots(2, sharex=True)
-    ax[0].plot(grid, solution_numerov, label="Numerov")
-    ax[1].set_xlabel(r"$\rho$")
-    ax[0].set_ylabel(r"$\zeta(\rho)$")
-    ax[0].plot(grid, analytic_solution, label="Analytic solution")
-    ax[1].set_ylabel(r"$\zeta(\rho) - \zeta_{00}(\rho)$, $10^4$")
-    # Plot relative error
     error_numerov = solution_numerov - analytic_solution
-    error_naive = solution_naive - analytic_solution
-    ax[1].plot(grid, error_numerov*10**4)
-    ax[0].grid(), ax[1].grid()
-    ax[0].legend()
-    plt.show()
+    return grid, solution_numerov, error_numerov, r"$\rho", r"$\zeta(\rho)", r"$\zeta(\rho) - \zeta_{00}(\rho)$, $10^4$"
