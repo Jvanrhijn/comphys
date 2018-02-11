@@ -51,6 +51,7 @@ def single_plot(assignment):
         plt.show()
     return wrapper
 
+
 def plot_single_window(assignment):
     """Plot multiple lines in a single window"""
     def wrapper():

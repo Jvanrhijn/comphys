@@ -184,15 +184,15 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
                                  left_bound, right_bound, potential, numerov=False):
     """
 
-    :param grid:
-    :param solution_first:
-    :param solution_second:
-    :param solution_last:
-    :param solution_second_last:
-    :param left_bound:
-    :param right_bound:
-    :param potential
-    :param numerov
+    :param grid: grid to solve equation on
+    :param solution_first: first value of solution
+    :param solution_second: second value of solution
+    :param solution_last: last value of solution
+    :param solution_second_last: second last value of solution
+    :param left_bound: left bound of bisection interval
+    :param right_bound: right bound of bisection interval
+    :param potential: potential energy function to solve equation for
+    :param numerov: whether to use Numerov's DE solving algorithm
     :return: new interval to bisect
     """
     mid_point = 0.5*(right_bound + left_bound)
@@ -226,18 +226,18 @@ def shooting_method(grid, solution_first, solution_second, solution_last, soluti
                     algorithm='bisection', numerov=False) -> float:
     """
 
-    :param grid:
-    :param solution_first:
-    :param solution_second:
-    :param solution_last:
-    :param solution_second_last:
-    :param turning_point:
-    :param tolerance:
-    :param max_iterations
-    :param potential
+    :param grid: grid to apply method on
+    :param solution_first: solution at first grid point
+    :param solution_second: solution at second grid point
+    :param solution_last: solution at last grid point
+    :param solution_second_last: solution at second last grid point
+    :param turning_point: turning point
+    :param tolerance: convergence tolerance
+    :param max_iterations: maximum iterations to run
+    :param potential: potential function to solve equation for
     :param algorithm_inputs: inputs required for algorithm, bracket for bisection, initial guess for improved algorithm
-    :param algorithm:
-    :param numerov:
+    :param algorithm: algorithm to use for finding roots, either 'bisection' or 'improved'
+    :param numerov: whether to use numerov algorithm in DE solver
     :return: eigenvalue obtained using the shooting method
     """
     assert(algorithm == 'bisection' or algorithm == 'improved')
@@ -249,7 +249,7 @@ def shooting_method(grid, solution_first, solution_second, solution_last, soluti
             old_root_guess = 0.5*(right_bound + left_bound)
             left_bound, right_bound = shooting_iteration_bisection(grid, solution_first, solution_second,
                                                                    solution_last, solution_second_last,
-                                                                   left_bound, right_bound, potential)
+                                                                   left_bound, right_bound, potential, numerov=numerov)
             new_root_guess = 0.5*(right_bound + left_bound)
             iterations += 1
             if abs(new_root_guess - old_root_guess) < tolerance:
