@@ -14,7 +14,7 @@ def excitons1b():
     grid = np.linspace(0, 10, 1000)
     turning_points = np.zeros(len(grid))
     for n, energy in enumerate(energies):
-        turning_points[n] = grid[shooting.outer_turning_point_newton(lambda x: 0.25*x**2, energy, grid, 100)]
+        turning_points[n] = grid[shooting.outer_turning_point(lambda x: 0.25*x**2, energy, grid)]
     return energies, turning_points, r"$\lambda$", "Turning point"
 
 
@@ -33,7 +33,7 @@ def excitons1c():
     analytic_solution = grid*np.exp(-grid**2/4)
     analytic_solution = shooting.normalize_solution(grid, analytic_solution)
     # Get classical turning point index
-    turning_point = shooting.outer_turning_point_newton(potential, eigenvalue_guess, grid, len(grid)//2)
+    turning_point = shooting.outer_turning_point(potential, eigenvalue_guess, grid)
     # Set up initial values of forward and backward solutions
     solution_forward_first = grid[0]
     solution_forward_second = grid[1]
@@ -81,7 +81,7 @@ def excitons2a():
     analytic_solution = grid*np.exp(-grid**2/4)
     analytic_solution = shooting.normalize_solution(grid, analytic_solution)
     # Get classical turning point index
-    turning_point = shooting.outer_turning_point_newton(potential, eigenvalue_guess, grid, len(grid)//2)
+    turning_point = shooting.outer_turning_point(potential, eigenvalue_guess, grid)
     # Set up initial values of forward and backward solutions
     solution_first = grid[0]
     solution_second = grid[1]
@@ -93,3 +93,35 @@ def excitons2a():
                                                turning_point, numerov=True)
     error_numerov = solution_numerov - analytic_solution
     return grid, solution_numerov, error_numerov, r"$\rho", r"$\zeta(\rho)", r"$\zeta(\rho) - \zeta_{00}(\rho)$, $10^4$"
+
+
+@single_plot
+def excitons2b():
+    def potential(x):
+        return 0.25*x**2
+    left_bound = 0.3
+    right_bound = 1.8
+    # Set up equidistant grid
+    grid_points = 100
+    grid_displacement = 0
+    grid_end = 5
+    grid = np.linspace(0, grid_end, grid_points) + grid_displacement
+    # Calculate analytic solution
+    analytic_solution = grid*np.exp(-grid**2/4)
+    analytic_solution = shooting.normalize_solution(grid, analytic_solution)
+    # Set up initial values of forward and backward solutions
+    solution_first = grid[0]
+    solution_second = grid[1]
+    solution_last = analytic_solution[-1]
+    solution_second_last = analytic_solution[-2]
+    # Do shooting method
+    tolerance = 10**-4
+    max_iterations = 100
+    eigenvalue = shooting.shooting_method(grid, solution_first, solution_second, solution_last, solution_second_last,
+                                          tolerance, max_iterations, potential, left_bound, right_bound, numerov=True)
+    # Get classical turning point index
+    turning_point = shooting.outer_turning_point(potential, eigenvalue, grid)
+    # Solve equation for found eigenvalue
+    solution = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last, grid,
+                                       potential, eigenvalue, turning_point, numerov=True)
+    return grid, solution, r"$\rho$", r"$\zeta(\rho)$"

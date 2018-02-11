@@ -4,45 +4,26 @@ Tests for each function are written at the bottom of the file.
 """
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Union
 import unittest
 
 
-def outer_turning_point_newton(potential, energy, grid, guess) -> int:
-    """Find index of outer turning point in grid, by Newton's method
+def outer_turning_point(potential, energy, grid) -> int:
+    """Find index of outer turning point in grid
 
     :param potential: effective potential energy function
     :param energy: energy eigenvalue of particle
-    :param grid: grid for use in numerical computation
-    :param guess: initial guess for index, needed for Newton
     :return: index of turning point in grid
     """
-    dx = min(np.diff(grid))
-    root = find_root_newton(lambda x: potential(x) - energy, 10, grid[guess], dx=dx)
-    index = abs(grid - root).argmin()
+    index = abs(potential(grid) - energy).argmin()
     return index
 
 
-def find_root_newton(function, iterations, initial_guess, dx=0.0001) -> float:
-    """Simple implementation of Newton's algorithm for root finding
-
-    :param function: function to find root of
-    :param iterations: number of iterations to do
-    :param initial_guess: initial guess for root location
-    :param dx: step size to use for computing derivative
-    :return: location of root, float
-    """
-    current = initial_guess
-    for n in range(0, iterations):
-        slope = (function(current + dx) - function(current - dx)) / (2*dx)
-        current -= function(current) / slope
-    return current
-
-
-def solution_next(previous, pprevious, potential, energy, step_size, *grid_points) -> float:
+def solution_next(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
     """Propagate solution
 
     :param previous: previous value of solution ('n')
-    :param pprevious: previous previous value of solution ('n-1')
+    :param p_previous: previous previous value of solution ('n-1')
     :param potential: effective potential energy function ('W')
     :param energy: energy eigenvalue ('lambda')
     :param step_size: step size ('h')
@@ -50,15 +31,15 @@ def solution_next(previous, pprevious, potential, energy, step_size, *grid_point
     :return: value of solution at next grid point
     """
     assert(step_size > 0)
-    next_value = 2*previous - pprevious + step_size**2*(potential(grid_points[0]) - energy)*previous
+    next_value = 2 * previous - p_previous + step_size ** 2 * (potential(grid_points[0]) - energy) * previous
     return next_value
 
 
-def solution_next_numerov(previous, pprevious, potential, energy, step_size, *grid_points) -> float:
+def solution_next_numerov(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
     """Propagate backward solution using Numerov's algorithm
 
     :param previous: previous value of solution ('n')
-    :param pprevious: previous previous value of solution ('n-1')
+    :param p_previous: previous previous value of solution ('n-1')
     :param potential: effective potential energy function ('W')
     :param energy: energy eigenvalue ('lambda')
     :param step_size: step size ('h')
@@ -66,9 +47,9 @@ def solution_next_numerov(previous, pprevious, potential, energy, step_size, *gr
     :return: value of solution at next (backward) grid point
     """
     assert(step_size > 0)
-    next_value = (5*step_size**2/6*(potential(grid_points[0]) - energy) + 2)*previous - (
+    next_value = (5*step_size**2/6*(potential(grid_points[0]) - energy) + 2) * previous - (
             1 - step_size**2/12
-            * (potential(grid_points[1]) - energy))*pprevious
+            * (potential(grid_points[1]) - energy)) * p_previous
     next_value /= 1 - step_size**2/12*(potential(grid_points[1]) - energy)
     return next_value
 
@@ -187,18 +168,102 @@ def solve_equation(solution_first, solution_second, solution_last, solution_seco
     return solution
 
 
+def continuity_measure_function(solution_left, solution_right, turning_point) -> float:
+    """Function F(lambda) from the lecture notes
+
+    :param solution_left: solution obtained by forward propagation
+    :param solution_right: solution obtained by backward propagation
+    :param turning_point: turning point index
+    :return: derivative continuity measure at turning point
+    """
+    return (solution_right[turning_point+1] - solution_right[turning_point-1]
+            - (solution_left[turning_point+1] - solution_left[turning_point-1]))
+
+
+def shooting_iteration_bisection(grid, solution_first, solution_second, solution_last, solution_second_last,
+                                 left_bound, right_bound, potential, numerov=False):
+    """
+
+    :param grid:
+    :param solution_first:
+    :param solution_second:
+    :param solution_last:
+    :param solution_second_last:
+    :param left_bound:
+    :param right_bound:
+    :param potential
+    :param numerov
+    :return: new interval to bisect
+    """
+    mid_point = 0.5*(right_bound + left_bound)
+    turning_point_left = outer_turning_point(potential, left_bound, grid)
+    turning_point_mid = outer_turning_point(potential, mid_point, grid)
+    solution_forward_left = solve_equation_forward(solution_first, solution_second, grid, potential, left_bound,
+                                                   turning_point_left, numerov=numerov)
+    solution_backward_left = solve_equation_backward(solution_last, solution_second_last, grid, potential, left_bound,
+                                                     turning_point_left, numerov=numerov)
+    solution_forward_left /= solution_forward_left[turning_point_left]
+    solution_backward_left /= solution_backward_left[turning_point_left]
+    left_derivative_continuity = continuity_measure_function(solution_forward_left, solution_backward_left,
+                                                             turning_point_left)
+    solution_forward_mid = solve_equation_forward(solution_first, solution_second, grid, potential, mid_point,
+                                                  turning_point_mid, numerov=numerov)
+    solution_backward_mid = solve_equation_backward(solution_first, solution_second, grid, potential, mid_point,
+                                                    turning_point_mid, numerov=numerov)
+    solution_backward_mid /= solution_backward_mid[turning_point_mid]
+    solution_forward_mid /= solution_forward_mid[turning_point_mid]
+    mid_derivative_continuity = continuity_measure_function(solution_forward_mid, solution_backward_mid,
+                                                            turning_point_mid)
+    # Get new interval
+    if np.sign(left_derivative_continuity) == np.sign(mid_derivative_continuity):
+        return mid_point, right_bound
+    else:
+        return left_bound, mid_point
+
+
+def shooting_method(grid, solution_first, solution_second, solution_last, solution_second_last,
+                    tolerance, max_iterations, potential, *algorithm_inputs,
+                    algorithm='bisection', numerov=False) -> float:
+    """
+
+    :param grid:
+    :param solution_first:
+    :param solution_second:
+    :param solution_last:
+    :param solution_second_last:
+    :param turning_point:
+    :param tolerance:
+    :param max_iterations
+    :param potential
+    :param algorithm_inputs: inputs required for algorithm, bracket for bisection, initial guess for improved algorithm
+    :param algorithm:
+    :param numerov:
+    :return: eigenvalue obtained using the shooting method
+    """
+    assert(algorithm == 'bisection' or algorithm == 'improved')
+    iterations = 0
+    if algorithm == 'bisection':
+        left_bound = algorithm_inputs[0]
+        right_bound = algorithm_inputs[1]
+        while iterations < max_iterations:
+            old_root_guess = 0.5*(right_bound + left_bound)
+            left_bound, right_bound = shooting_iteration_bisection(grid, solution_first, solution_second,
+                                                                   solution_last, solution_second_last,
+                                                                   left_bound, right_bound, potential)
+            new_root_guess = 0.5*(right_bound + left_bound)
+            iterations += 1
+            if abs(new_root_guess - old_root_guess) < tolerance:
+                return new_root_guess
+    elif algorithm == 'improved':
+        raise ValueError("Improved method not yet implemented")
+    return False
+
+
 class ShootingTest(unittest.TestCase):
     """ Test cases for the functions in this module"""
-    def test_find_root_newton(self):
-        """Test newton root finding algorithm"""
-        self.assertAlmostEqual(find_root_newton(lambda x: (x**2 - 1), 5, 0.5), 1, 3)
-        self.assertAlmostEqual(find_root_newton(lambda x: (x**2 - 1), 5, -.5), -1, 3)
-        with self.assertRaises(TypeError):
-            find_root_newton(lambda x: x, "foo", 0.1)
-
     def test_outer_turning_point(self):
-        self.assertEqual(outer_turning_point_newton(lambda x: x**2, 1, np.linspace(0, 10, 1000), 50), 100)
-        self.assertEqual(outer_turning_point_newton(lambda x: x**3, 1.5, np.linspace(0, 10, 1000), 50), 114)
+        self.assertEqual(outer_turning_point(lambda x: x**2, 1, np.linspace(0, 2, 200)), 99)
+        self.assertEqual(outer_turning_point(lambda x: x**3, 1.5, np.linspace(0, 2, 200)), 114)
 
     def test_solution_next(self):
         self.assertAlmostEqual(solution_next(0.1, 0.05, lambda x: 0.5*x**2, 1.5, 0.01, 10), 0.150485, 4)
