@@ -95,7 +95,7 @@ def excitons2a():
     return grid, solution_numerov, error_numerov, r"$\rho", r"$\zeta(\rho)", r"$\zeta(\rho) - \zeta_{00}(\rho)$, $10^4$"
 
 
-@single_plot
+@plot_single_window
 def excitons2b():
     def potential(x):
         return 0.25*x**2
@@ -124,4 +124,18 @@ def excitons2b():
     # Solve equation for found eigenvalue
     solution = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last, grid,
                                        potential, eigenvalue, turning_point, numerov=True)
-    return grid, solution, r"$\rho$", r"$\zeta(\rho)$"
+    # Solve equation for upper and lower bound
+    solution_lower = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last, grid,
+                                             potential, left_bound,
+                                             shooting.outer_turning_point(potential, left_bound, grid), numerov=True)
+    solution_upper = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last, grid,
+                                             potential, right_bound,
+                                             shooting.outer_turning_point(potential, right_bound, grid), numerov=True)
+    return grid, [solution_lower, solution_upper, solution], \
+        r"$\rho$", r"$\zeta(\rho)$", \
+        [
+         r"Solution for $\lambda = {}".format(left_bound),
+         r"Solution for $\lambda = {}$".format(right_bound),
+         r"Converged solution, $\lambda = {}$".format(round(eigenvalue, 4))
+           ]
+
