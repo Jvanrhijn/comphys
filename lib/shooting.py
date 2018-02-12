@@ -223,6 +223,42 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
         return left_bound, mid_point, mid_derivative_continuity
 
 
+def shooting_iteration_improved(solution_first, solution_second, solution_last, solution_second_last, grid, potential,
+                                eigenvalue_guess, tolerance, numerov=False):
+    """Retrieve next eigenvalue guess using the improved algorithm
+
+    :param solution_first: first value of solution
+    :param solution_second: second value of solution
+    :param solution_last: last value of solution
+    :param solution_second_last: second last value of solution
+    :param grid: grid to sove equation on
+    :param potential: potential function to solve equation for
+    :param eigenvalue_guess: guess for eigenvalue
+    :param tolerance: tolerance to check for convergence
+    :param numerov: whether to use Numerov's algorithm
+    :return: new eigenvalue guess, measure of derivative continuity, whether the algorithm has converged sufficiently
+    """
+    step_size = min(np.diff(grid))
+    turning_point = outer_turning_point(potential, eigenvalue_guess, grid)
+    solution_left = solve_equation_forward(solution_first, solution_second,
+                                           grid, potential, eigenvalue_guess,
+                                           turning_point, numerov=numerov)
+    solution_right = solve_equation_backward(solution_last, solution_second_last,
+                                             grid, potential, eigenvalue_guess,
+                                             turning_point, numerov=numerov)
+    solution_left /= solution_left[turning_point]
+    solution_right /= solution_right[turning_point]
+    # Use trapezoidal integration to calculate factor 'A'
+    factor = (np.trapz(solution_left[:turning_point]**2, grid[:turning_point])
+              + np.trapz(solution_right[turning_point:]**2, grid[turning_point:]))**-1
+    derivative_continuity = continuity_measure_function(solution_left, solution_right, turning_point)
+    # Get next eigenvalue guess
+    eigenvalue_guess -= factor*derivative_continuity/(2*step_size)
+    # Check for convergence
+    converged = (abs(derivative_continuity*factor) < tolerance)
+    return eigenvalue_guess, derivative_continuity, converged
+
+
 def shooting_method(grid, solution_first, solution_second, solution_last, solution_second_last,
                     tolerance, max_iterations, potential, *algorithm_inputs,
                     algorithm='bisection', numerov=False):
@@ -244,46 +280,35 @@ def shooting_method(grid, solution_first, solution_second, solution_last, soluti
     """
     assert(algorithm == 'bisection' or algorithm == 'improved')
     iterations = 0
-    mid_continuity_iterations, eigenvalues = [], []
+    continuity_iterations, eigenvalues = [], []
+    converged = False
     if algorithm == 'bisection':
         left_bound = algorithm_inputs[0]
         right_bound = algorithm_inputs[1]
-        while iterations < max_iterations:
+        while not converged and iterations < max_iterations:
             old_root_guess = 0.5*(right_bound + left_bound)
             left_bound, right_bound, mid_continuity = shooting_iteration_bisection(grid, solution_first,
                                                                                    solution_second, solution_last,
                                                                                    solution_second_last, left_bound,
                                                                                    right_bound, potential,
                                                                                    numerov=numerov)
-            mid_continuity_iterations.append(mid_continuity)
+            continuity_iterations.append(mid_continuity)
             new_root_guess = 0.5*(right_bound + left_bound)
             eigenvalues.append(new_root_guess)
             iterations += 1
-            if abs(new_root_guess - old_root_guess) < tolerance:
-                return eigenvalues, mid_continuity_iterations
+            converged = (abs(new_root_guess - old_root_guess) < tolerance)
     elif algorithm == 'improved':
-        step_size = min(np.diff(grid))
         eigenvalue_guess = algorithm_inputs[0]
-        while iterations < max_iterations:
-            turning_point = outer_turning_point(potential, eigenvalue_guess, grid)
-            solution_left = solve_equation_forward(solution_first, solution_second,
-                                                   grid, potential, eigenvalue_guess,
-                                                   turning_point, numerov=numerov)
-            solution_right = solve_equation_backward(solution_last, solution_second_last,
-                                                     grid, potential, eigenvalue_guess,
-                                                     turning_point, numerov=numerov)
-            solution_left /= solution_left[turning_point]
-            solution_right /= solution_right[turning_point]
-            # Use trapezoidal integration to calculate factor
-            factor = (np.trapz(solution_left**2, grid) + np.trapz(solution_right**2, grid))**-1
-            derivative_continuity = continuity_measure_function(solution_left, solution_right, turning_point)
-            # Get next eigenvalue guess
-            eigenvalue_guess -= factor*derivative_continuity/(2*step_size)
-            mid_continuity_iterations.append(derivative_continuity), eigenvalues.append(eigenvalue_guess)
+        while not converged and iterations < max_iterations:
+            eigenvalue_guess, derivative_continuity, converged = shooting_iteration_improved(
+                                                                                  solution_first, solution_second,
+                                                                                  solution_last, solution_second_last,
+                                                                                  grid, potential, eigenvalue_guess,
+                                                                                  tolerance, numerov=numerov
+                                                                                  )
+            continuity_iterations.append(derivative_continuity), eigenvalues.append(eigenvalue_guess)
             iterations += 1
-            if abs(derivative_continuity*factor) < tolerance:
-                return eigenvalues, mid_continuity_iterations
-    return False
+    return eigenvalues, continuity_iterations
 
 
 def generate_latex_table(left_column, right_column, header_left, header_right, rounding=None) -> str:

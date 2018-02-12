@@ -175,10 +175,10 @@ def excitons3a():
     # Set up equidistant grid
     grid_points = 10000
     grid_displacement = 10**-5
-    grid_end = 60
+    grid_end = 75
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
     # Guess an eigenvalue
-    eigenvalue_guess = -1
+    eigenvalue_guess = -0.25
     # Set up initial values for forward & backward solutions
     solution_first = grid[0]**2
     solution_second = grid[1]**2
@@ -192,9 +192,10 @@ def excitons3a():
                                                                     tolerance, max_iterations, potential,
                                                                     eigenvalue_guess, algorithm='improved',
                                                                     numerov=True)
+    eigenvalue = eigenvalues[-1]
     # Solve equation
-    turning_point = shooting.outer_turning_point(potential, eigenvalues[-1], grid)
+    turning_point = shooting.outer_turning_point(potential, eigenvalue, grid)
     solution = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last,
-                                       grid, potential, eigenvalues[-1], turning_point, numerov=True)
-    return grid, [solution], [r"$\lambda = {0}$".format(round(eigenvalues[-1], 4))]
+                                       grid, potential, eigenvalue, turning_point, numerov=True)
+    return grid, [solution], [r"$\lambda = {0}$".format(round(eigenvalue, 4))]
 
