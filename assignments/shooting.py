@@ -167,3 +167,36 @@ def excitons2c():
                                                        solution_second_last, tolerance, max_iterations, potential,
                                                        eigenvalue_guess, numerov=True, algorithm='improved')
     print(shooting.generate_latex_table(eigenvalues, continuity, "$E/V_0$", "$F(E/V_0)$", rounding=9))
+
+
+@single_plot
+def excitons3a():
+    def potential(x):
+        return 2/x**2 - 2/x
+    # Set up equidistant grid
+    grid_points = 1000
+    grid_displacement = 0.01
+    grid_end = 60
+    grid = np.linspace(0, grid_end, grid_points) + grid_displacement
+    # Guess an eigenvalue
+    eigenvalue_guess = -0.06
+    # Set up initial values for forward & backward solutions
+    solution_first = grid[0]**2
+    solution_second = grid[1]**2
+    solution_last = np.exp(-np.sqrt(-eigenvalue_guess)*grid[-1])
+    solution_second_last = np.exp(-np.sqrt(-eigenvalue_guess)*grid[-2])
+    # Shoot!
+    max_iterations = 100
+    tolerance = 10**-12
+    eigenvalues, derivative_continuities = shooting.shooting_method(grid, solution_first, solution_second,
+                                                                    solution_last, solution_second_last,
+                                                                    tolerance, max_iterations, potential,
+                                                                    eigenvalue_guess, algorithm='improved',
+                                                                    numerov=True)
+    print(eigenvalues[-1], len(eigenvalues))
+    # Solve equation
+    turning_point = shooting.outer_turning_point(potential, eigenvalues[-1], grid)
+    solution = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last,
+                                       grid, potential, eigenvalue_guess, turning_point, numerov=True)
+    return grid, solution, r"$\rho$", r"$\zeta(\rho)$"
+
