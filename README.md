@@ -1,12 +1,10 @@
 # Computational Physics
 
-This repository contains the solutions to the University of Twente Computational Physics course of Applied Physics. \
-Helper functions are implemented in different files under /lib/, while scripts are found in /comphys.py.
+This repository contains the solutions to the University of Twente Computational Physics course of Applied Physics. Helper functions are implemented in different files under /lib/, while scripts are found in /comphys.py.
 
 **Dependencies**
 
-Python 3, numpy and matplotlib. All numerical routines are implemented in /lib/*, so numpy is really only used for array\
-handling.
+Python 3, numpy and matplotlib. All numerical routines are implemented in /lib/*, so numpy is really only used for array handling.
 
 **Usage**
 
