@@ -146,7 +146,6 @@ def glue_arrays_together(first_half, second_half, at_index, overwrite=1) -> np.n
         return second_half
 
 
-
 def normalize_solution(grid, solution) -> np.ndarray:
     """Normalize wave function
 
