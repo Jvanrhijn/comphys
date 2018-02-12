@@ -52,17 +52,19 @@ def single_plot(assignment):
     return wrapper
 
 
-def plot_single_window(assignment):
+def plot_single_window(*args):
     """Plot multiple lines in a single window"""
-    def wrapper():
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        x, y_arrays, x_label, y_label, plot_labels = assignment()
-        for y, label in zip(y_arrays, plot_labels):
-            ax.plot(x, y, label=label)
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        ax.grid()
-        ax.legend()
-        plt.show()
-    return wrapper
+    def decorator(assignment):
+        def wrapper():
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            x, y_arrays, plot_labels = assignment()
+            for y, label in zip(y_arrays, plot_labels):
+                ax.plot(x, y, label=label)
+            ax.set_xlabel(args[0])
+            ax.set_ylabel(args[1])
+            ax.grid()
+            ax.legend()
+            plt.show()
+        return wrapper
+    return decorator

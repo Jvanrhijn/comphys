@@ -95,7 +95,7 @@ def excitons2a():
     return grid, solution_numerov, error_numerov, r"$\rho", r"$\zeta(\rho)", r"$\zeta(\rho) - \zeta_{00}(\rho)$"
 
 
-@plot_single_window
+@plot_single_window(r"$\rho$", r"$\zeta(\rho)$")
 def excitons2b():
     def potential(x):
         return 0.25*x**2
@@ -135,7 +135,6 @@ def excitons2b():
                                              shooting.outer_turning_point(potential, right_bound, grid), numerov=True)
     print(shooting.generate_latex_table(eigenvalues, continuities, "$E/V_0$", "$F(E/V_0)$", rounding=5))
     return grid, [solution_lower, solution_upper, solution], \
-        r"$\rho$", r"$\zeta(\rho)$", \
         [
          r"Solution for $\lambda = {}".format(left_bound),
          r"Solution for $\lambda = {}$".format(right_bound),
@@ -169,17 +168,17 @@ def excitons2c():
     print(shooting.generate_latex_table(eigenvalues, continuity, "$E/V_0$", "$F(E/V_0)$", rounding=9))
 
 
-@single_plot
+@plot_single_window(r"$\rho$", r"\zeta(\rho)")
 def excitons3a():
     def potential(x):
-        return 2/x**2 - 2/x
+        return -2/x + 2/x**2
     # Set up equidistant grid
-    grid_points = 1000
-    grid_displacement = 0.01
+    grid_points = 10000
+    grid_displacement = 10**-5
     grid_end = 60
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
     # Guess an eigenvalue
-    eigenvalue_guess = -0.06
+    eigenvalue_guess = -1
     # Set up initial values for forward & backward solutions
     solution_first = grid[0]**2
     solution_second = grid[1]**2
@@ -187,16 +186,15 @@ def excitons3a():
     solution_second_last = np.exp(-np.sqrt(-eigenvalue_guess)*grid[-2])
     # Shoot!
     max_iterations = 100
-    tolerance = 10**-12
+    tolerance = 10**-10
     eigenvalues, derivative_continuities = shooting.shooting_method(grid, solution_first, solution_second,
                                                                     solution_last, solution_second_last,
                                                                     tolerance, max_iterations, potential,
                                                                     eigenvalue_guess, algorithm='improved',
                                                                     numerov=True)
-    print(eigenvalues[-1], len(eigenvalues))
     # Solve equation
     turning_point = shooting.outer_turning_point(potential, eigenvalues[-1], grid)
     solution = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last,
-                                       grid, potential, eigenvalue_guess, turning_point, numerov=True)
-    return grid, solution, r"$\rho$", r"$\zeta(\rho)$"
+                                       grid, potential, eigenvalues[-1], turning_point, numerov=True)
+    return grid, [solution], [r"$\lambda = {0}$".format(round(eigenvalues[-1], 4))]
 
