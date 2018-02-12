@@ -92,7 +92,7 @@ def excitons2a():
                                                solution_second_last, grid, potential, eigenvalue_guess,
                                                turning_point, numerov=True)
     error_numerov = solution_numerov - analytic_solution
-    return grid, solution_numerov, error_numerov, r"$\rho", r"$\zeta(\rho)", r"$\zeta(\rho) - \zeta_{00}(\rho)$, $10^4$"
+    return grid, solution_numerov, error_numerov, r"$\rho", r"$\zeta(\rho)", r"$\zeta(\rho) - \zeta_{00}(\rho)$"
 
 
 @plot_single_window
@@ -117,8 +117,10 @@ def excitons2b():
     # Do shooting method
     tolerance = 10**-4
     max_iterations = 100
-    eigenvalue = shooting.shooting_method(grid, solution_first, solution_second, solution_last, solution_second_last,
-                                          tolerance, max_iterations, potential, left_bound, right_bound, numerov=True)
+    eigenvalues, continuities, = shooting.shooting_method(grid, solution_first, solution_second, solution_last,
+                                                          solution_second_last, tolerance, max_iterations, potential,
+                                                          left_bound, right_bound, numerov=True)
+    eigenvalue = eigenvalues[-1]
     # Get classical turning point index
     turning_point = shooting.outer_turning_point(potential, eigenvalue, grid)
     # Solve equation for found eigenvalue
@@ -131,11 +133,37 @@ def excitons2b():
     solution_upper = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last, grid,
                                              potential, right_bound,
                                              shooting.outer_turning_point(potential, right_bound, grid), numerov=True)
+    print(shooting.generate_latex_table(eigenvalues, continuities, "$E/V_0$", "$F(E/V_0)$", rounding=5))
     return grid, [solution_lower, solution_upper, solution], \
         r"$\rho$", r"$\zeta(\rho)$", \
         [
          r"Solution for $\lambda = {}".format(left_bound),
          r"Solution for $\lambda = {}$".format(right_bound),
          r"Converged solution, $\lambda = {}$".format(round(eigenvalue, 4))
-           ]
+        ]
 
+
+def excitons2c():
+    def potential(x):
+        return 0.25*x**2
+    # Set up equidistant grid
+    grid_points = 100
+    grid_displacement = 0
+    grid_end = 5
+    grid = np.linspace(0, grid_end, grid_points) + grid_displacement
+    # Calculate analytic solution
+    analytic_solution = grid*np.exp(-grid**2/4)
+    analytic_solution = shooting.normalize_solution(grid, analytic_solution)
+    # Set up initial values of forward and backward solutions
+    solution_first = grid[0]
+    solution_second = grid[1]
+    solution_last = analytic_solution[-1]
+    solution_second_last = analytic_solution[-2]
+    # Do shooting method
+    tolerance = 10**-8
+    max_iterations = 100
+    eigenvalue_guess = 0.4
+    eigenvalues, continuity = shooting.shooting_method(grid, solution_first, solution_second, solution_last,
+                                                       solution_second_last, tolerance, max_iterations, potential,
+                                                       eigenvalue_guess, numerov=True, algorithm='improved')
+    print(shooting.generate_latex_table(eigenvalues, continuity, "$E/V_0$", "$F(E/V_0)$", rounding=9))

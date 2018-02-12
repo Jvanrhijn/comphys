@@ -36,7 +36,7 @@ def solution_next(previous, p_previous, potential, energy, step_size, *grid_poin
 
 
 def solution_next_numerov(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
-    """Propagate backward solution using Numerov's algorithm
+    """Propagate solution using Numerov's algorithm
 
     :param previous: previous value of solution ('n')
     :param p_previous: previous previous value of solution ('n-1')
@@ -50,7 +50,7 @@ def solution_next_numerov(previous, p_previous, potential, energy, step_size, *g
     next_value = (5*step_size**2/6*(potential(grid_points[0]) - energy) + 2) * previous - (
             1 - step_size**2/12
             * (potential(grid_points[1]) - energy)) * p_previous
-    next_value /= 1 - step_size**2/12*(potential(grid_points[1]) - energy)
+    next_value /= 1 - step_size**2/12*(potential(grid_points[2]) - energy)
     return next_value
 
 
@@ -75,7 +75,8 @@ def solve_equation_forward(solution_first, solution_second, grid, potential, ene
         propagate = solution_next
     for n in range(2, turning_point_index + 2):
         step_size = grid[n] - grid[n-1]
-        solution[n] = propagate(solution[n-1], solution[n-2], potential, energy, step_size, grid[n-1], grid[n-2])
+        solution[n] = propagate(solution[n-1], solution[n-2], potential, energy, step_size,
+                                grid[n-1], grid[n-2], grid[n])
     return solution
 
 
@@ -101,7 +102,8 @@ def solve_equation_backward(solution_last, solution_second_last, grid, potential
         propagate = solution_next
     for n in range(len(grid) - 3, turning_point_index - 2, -1):
         step_size = grid[n] - grid[n-1]
-        solution[n] = propagate(solution[n+1], solution[n+2], potential, energy, step_size, grid[n+1], grid[n+2])
+        solution[n] = propagate(solution[n+1], solution[n+2], potential, energy, step_size,
+                                grid[n+1], grid[n+2], grid[n])
     return solution
 
 
@@ -216,15 +218,15 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
                                                             turning_point_mid)
     # Get new interval
     if np.sign(left_derivative_continuity) == np.sign(mid_derivative_continuity):
-        return mid_point, right_bound
+        return mid_point, right_bound, mid_derivative_continuity
     else:
-        return left_bound, mid_point
+        return left_bound, mid_point, mid_derivative_continuity
 
 
 def shooting_method(grid, solution_first, solution_second, solution_last, solution_second_last,
                     tolerance, max_iterations, potential, *algorithm_inputs,
-                    algorithm='bisection', numerov=False) -> float:
-    """
+                    algorithm='bisection', numerov=False):
+    """Calculate an eigenvalue of the Schrödinger equation for a given potential, using the shooting method
 
     :param grid: grid to apply method on
     :param solution_first: solution at first grid point
@@ -242,21 +244,65 @@ def shooting_method(grid, solution_first, solution_second, solution_last, soluti
     """
     assert(algorithm == 'bisection' or algorithm == 'improved')
     iterations = 0
+    mid_continuity_iterations, eigenvalues = [], []
     if algorithm == 'bisection':
         left_bound = algorithm_inputs[0]
         right_bound = algorithm_inputs[1]
         while iterations < max_iterations:
             old_root_guess = 0.5*(right_bound + left_bound)
-            left_bound, right_bound = shooting_iteration_bisection(grid, solution_first, solution_second,
-                                                                   solution_last, solution_second_last,
-                                                                   left_bound, right_bound, potential, numerov=numerov)
+            left_bound, right_bound, mid_continuity = shooting_iteration_bisection(grid, solution_first,
+                                                                                   solution_second, solution_last,
+                                                                                   solution_second_last, left_bound,
+                                                                                   right_bound, potential,
+                                                                                   numerov=numerov)
+            mid_continuity_iterations.append(mid_continuity)
             new_root_guess = 0.5*(right_bound + left_bound)
+            eigenvalues.append(new_root_guess)
             iterations += 1
             if abs(new_root_guess - old_root_guess) < tolerance:
-                return new_root_guess
+                return eigenvalues, mid_continuity_iterations
     elif algorithm == 'improved':
-        raise ValueError("Improved method not yet implemented")
+        step_size = min(np.diff(grid))
+        eigenvalue_guess = algorithm_inputs[0]
+        while iterations < max_iterations:
+            turning_point = outer_turning_point(potential, eigenvalue_guess, grid)
+            solution_left = solve_equation_forward(solution_first, solution_second,
+                                                   grid, potential, eigenvalue_guess,
+                                                   turning_point, numerov=numerov)
+            solution_right = solve_equation_backward(solution_last, solution_second_last,
+                                                     grid, potential, eigenvalue_guess,
+                                                     turning_point, numerov=numerov)
+            solution_left /= solution_left[turning_point]
+            solution_right /= solution_right[turning_point]
+            # Use trapezoidal integration to calculate factor
+            factor = (np.trapz(solution_left**2, grid) + np.trapz(solution_right**2, grid))**-1
+            derivative_continuity = continuity_measure_function(solution_left, solution_right, turning_point)
+            # Get next eigenvalue guess
+            eigenvalue_guess -= factor*derivative_continuity/(2*step_size)
+            mid_continuity_iterations.append(derivative_continuity), eigenvalues.append(eigenvalue_guess)
+            iterations += 1
+            if abs(derivative_continuity*factor) < tolerance:
+                return eigenvalues, mid_continuity_iterations
     return False
+
+
+def generate_latex_table(left_column, right_column, header_left, header_right, rounding=None) -> str:
+    """Generate a LaTeX table from two lists
+
+    :param left_column: list with values to list in left column
+    :param right_column: list with values to list in right column
+    :param header_left: left header
+    :param header_right: right header
+    :param rounding: digits to round values to, defaults to no rounding
+    :return: string containing LaTeX formatted table
+    """
+    table = "{0} & {1}\\\\\\hline\n".format(header_left, header_right)
+    for left, right in zip(left_column, right_column):
+        if rounding is not None:
+            left = round(left, rounding)
+            right = round(right, rounding)
+        table += str(left) + " & " + str(right) + "\\\\ \n"
+    return table
 
 
 class ShootingTest(unittest.TestCase):
