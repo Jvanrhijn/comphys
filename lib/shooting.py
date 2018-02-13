@@ -32,8 +32,8 @@ def solution_next(previous, p_previous, potential, energy, step_size, *grid_poin
     :return: value of solution at next grid point
     """
     assert(step_size > 0)
-    return 2 * previous - p_previous + step_size ** 2 * (potential(grid_points[0]) - energy) * previous
 
+    return 2 * previous - p_previous + step_size ** 2 * (potential(grid_points[0]) - energy) * previous
 
 
 def solution_next_numerov(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
@@ -58,7 +58,7 @@ def solution_next_numerov(previous, p_previous, potential, energy, step_size, *g
 
 
 def solve_equation_forward(solution_first, solution_second, grid, potential, energy, turning_point_index,
-                           numerov=False) -> np.ndarray:
+                           propagate) -> np.ndarray:
     """Solves the differential equation by forward propagation
 
     :param solution_first: the solution at the first grid point
@@ -67,16 +67,12 @@ def solve_equation_forward(solution_first, solution_second, grid, potential, ene
     :param potential: the potential function to solve the equation for
     :param energy: the energy eigenvalue to solve the equation for
     :param turning_point_index: index of turning point in grid
-    :param numerov: use numerov's algorithm for propagation, defaults to False (which uses Euler's algorithm)
+    :param propagate: propagation function to use, should return next value of solution given previous values and grid
+           points
     :return: solution (numpy array) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[0], solution[1] = solution_first, solution_second
-
-    if numerov:
-        propagate = solution_next_numerov
-    else:
-        propagate = solution_next
 
     for n in range(2, turning_point_index + 2):
         step_size = grid[n] - grid[n-1]
@@ -87,7 +83,7 @@ def solve_equation_forward(solution_first, solution_second, grid, potential, ene
 
 
 def solve_equation_backward(solution_last, solution_second_last, grid, potential, energy, turning_point_index,
-                            numerov=False) -> np.ndarray:
+                            propagate) -> np.ndarray:
     """Solves the differential equation by backward propagation
 
     :param solution_last: value of solution at end point
@@ -96,18 +92,14 @@ def solve_equation_backward(solution_last, solution_second_last, grid, potential
     :param potential: the potential function to solve the equation for
     :param energy: the energy eigenvalue to solve the equation for
     :param turning_point_index: index of turning point in grid
-    :param numerov: use Numerov's algorithm for propagation, defaults to False (which uses Euler's algorithm)
+    :param propagate: propagation function to use, should return next value of solution given previous values and grid
+           points
     :return: solution (numpy array) obtained by forward propagation
     """
     solution = np.zeros(len(grid))
     solution[-1], solution[-2] = solution_last, solution_second_last
 
     # Choose algorithm
-
-    if numerov:
-        propagate = solution_next_numerov
-    else:
-        propagate = solution_next
 
     for n in range(len(grid) - 3, turning_point_index - 2, -1):
         step_size = grid[n] - grid[n-1]
@@ -156,7 +148,7 @@ def normalize_solution(grid, solution) -> np.ndarray:
 
 
 def solve_equation(solution_first, solution_second, solution_last, solution_second_last, grid, potential, energy,
-                   turning_point_index, numerov=False) -> np.ndarray:
+                   turning_point_index, propagate) -> np.ndarray:
     """Solve the differential equation on the entire grid
 
     :param solution_first: first value of solution
@@ -167,13 +159,14 @@ def solve_equation(solution_first, solution_second, solution_last, solution_seco
     :param potential: potential to solve equation for
     :param energy: energy eigenvalue guess
     :param turning_point_index: index of turning point in grid
-    :param numerov: whether to use numerov algorithm, defaults to False
+    :param propagate: propagation function to use, should return next value of solution given previous values and grid
+           points
     :return: normalized numerical solution of radial Schrödinger equation on grid,
     """
     solution_forward = solve_equation_forward(solution_first, solution_second, grid, potential, energy,
-                                              turning_point_index, numerov=numerov)
+                                              turning_point_index, propagate)
     solution_backward = solve_equation_backward(solution_last, solution_second_last, grid, potential, energy,
-                                                turning_point_index, numerov=numerov)
+                                                turning_point_index, propagate)
 
     # Match forward and backward solutions and normalize
     solution_forward /= solution_forward[turning_point_index]
@@ -197,8 +190,8 @@ def continuity_measure_function(solution_left, solution_right, turning_point) ->
 
 
 def shooting_iteration_bisection(grid, solution_first, solution_second, solution_last, solution_second_last,
-                                 left_bound, right_bound, potential, numerov=False):
-    """
+                                 left_bound, right_bound, potential, propagate):
+    """Do an iteration of the bisection method for finding a better approximation of the eigenvalue
 
     :param grid: grid to solve equation on
     :param solution_first: first value of solution
@@ -208,7 +201,8 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
     :param left_bound: left bound of bisection interval
     :param right_bound: right bound of bisection interval
     :param potential: potential energy function to solve equation for
-    :param numerov: whether to use Numerov's DE solving algorithm
+    :param propagate: propagation function to use, should return next value of solution given previous values and grid
+           points
     :return: new interval to bisect
     """
     mid_point = 0.5*(right_bound + left_bound)
@@ -217,13 +211,13 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
 
     # Calculate forward & backward solutions for the lower bound & the interval midpoint
     solution_forward_left = solve_equation_forward(solution_first, solution_second, grid, potential, left_bound,
-                                                   turning_point_left, numerov=numerov)
+                                                   turning_point_left, propagate)
     solution_backward_left = solve_equation_backward(solution_last, solution_second_last, grid, potential, left_bound,
-                                                     turning_point_left, numerov=numerov)
+                                                     turning_point_left, propagate)
     solution_forward_mid = solve_equation_forward(solution_first, solution_second, grid, potential, mid_point,
-                                                  turning_point_mid, numerov=numerov)
+                                                  turning_point_mid, propagate)
     solution_backward_mid = solve_equation_backward(solution_first, solution_second, grid, potential, mid_point,
-                                                    turning_point_mid, numerov=numerov)
+                                                    turning_point_mid, propagate)
 
     solution_forward_left /= solution_forward_left[turning_point_left]
     solution_backward_left /= solution_backward_left[turning_point_left]
@@ -235,7 +229,7 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
     mid_derivative_continuity = continuity_measure_function(solution_forward_mid, solution_backward_mid,
                                                             turning_point_mid)
 
-    # Narrow down the interval containing the root accoring to the bisection algoritm
+    # Narrow down the interval containing the root according to the bisection algorithm
     if np.sign(left_derivative_continuity) == np.sign(mid_derivative_continuity):
         return mid_point, right_bound, mid_derivative_continuity
     else:
@@ -243,7 +237,7 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
 
 
 def shooting_iteration_improved(solution_first, solution_second, solution_last, solution_second_last, grid, potential,
-                                eigenvalue_guess, tolerance, numerov=False):
+                                eigenvalue_guess, tolerance, propagate):
     """Retrieve next eigenvalue guess using the improved algorithm
 
     :param solution_first: first value of solution
@@ -254,7 +248,8 @@ def shooting_iteration_improved(solution_first, solution_second, solution_last, 
     :param potential: potential function to solve equation for
     :param eigenvalue_guess: guess for eigenvalue
     :param tolerance: tolerance to check for convergence
-    :param numerov: whether to use Numerov's algorithm
+    :param propagate: propagation function to use, should return next value of solution given previous values and grid
+           points
     :return: new eigenvalue guess, measure of derivative continuity, whether the algorithm has converged sufficiently
     """
     step_size = min(np.diff(grid))
@@ -262,10 +257,10 @@ def shooting_iteration_improved(solution_first, solution_second, solution_last, 
 
     solution_left = solve_equation_forward(solution_first, solution_second,
                                            grid, potential, eigenvalue_guess,
-                                           turning_point, numerov=numerov)
+                                           turning_point, propagate)
     solution_right = solve_equation_backward(solution_last, solution_second_last,
                                              grid, potential, eigenvalue_guess,
-                                             turning_point, numerov=numerov)
+                                             turning_point, propagate)
 
     solution_left /= solution_left[turning_point]
     solution_right /= solution_right[turning_point]
@@ -285,8 +280,8 @@ def shooting_iteration_improved(solution_first, solution_second, solution_last, 
 
 
 def shooting_method(grid, solution_first, solution_second, solution_last, solution_second_last,
-                    tolerance, max_iterations, potential, *algorithm_inputs,
-                    algorithm='bisection', numerov=False):
+                    tolerance, max_iterations, potential, propagate, *algorithm_inputs,
+                    algorithm='bisection'):
     """Calculate an eigenvalue of the Schrödinger equation for a given potential, using the shooting method
 
     :param grid: grid to apply method on
@@ -299,7 +294,8 @@ def shooting_method(grid, solution_first, solution_second, solution_last, soluti
     :param potential: potential function to solve equation for
     :param algorithm_inputs: inputs required for algorithm, bracket for bisection, initial guess for improved algorithm
     :param algorithm: algorithm to use for finding roots, either 'bisection' or 'improved'
-    :param numerov: whether to use Numerov algorithm in DE solver
+    :param propagate: propagation function to use, should return next value of solution given previous values and grid
+           points
     :return: eigenvalue obtained using the shooting method
     """
     assert(algorithm == 'bisection' or algorithm == 'improved')
@@ -318,7 +314,7 @@ def shooting_method(grid, solution_first, solution_second, solution_last, soluti
                                                                                 solution_second, solution_last,
                                                                                 solution_second_last, left_bound,
                                                                                 right_bound, potential,
-                                                                                numerov=numerov
+                                                                                propagate
                                                                                 )
             new_root_guess = 0.5*(right_bound + left_bound)
 
@@ -335,7 +331,7 @@ def shooting_method(grid, solution_first, solution_second, solution_last, soluti
                                                                                   solution_first, solution_second,
                                                                                   solution_last, solution_second_last,
                                                                                   grid, potential, eigenvalue_guess,
-                                                                                  tolerance, numerov=numerov
+                                                                                  tolerance, propagate
                                                                                   )
             continuity_iterations.append(derivative_continuity)
             eigenvalues.append(eigenvalue_guess)
