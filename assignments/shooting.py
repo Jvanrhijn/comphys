@@ -49,23 +49,10 @@ def excitons1c():
     solution_backward_last = analytic_solution[-1]
     solution_backward_second_last = analytic_solution[-2]
 
-    # Solve the differential equation
-    solution_forward = shooting.solve_equation_forward(solution_forward_first, solution_forward_second,
-                                                       grid, potential, eigenvalue_guess, turning_point,
-                                                       shooting.solution_next_numerov)
-    solution_backward = shooting.solve_equation_backward(solution_backward_last, solution_backward_second_last,
-                                                         grid, potential, eigenvalue_guess, turning_point,
-                                                         shooting.solution_next_numerov)
-
-    # Match the solutions at the turning point
-    solution_forward /= solution_forward[turning_point]
-    solution_backward /= solution_backward[turning_point]
-
-    # Glue solutions together
-    solution = shooting.glue_arrays_together(solution_forward, solution_backward, turning_point)
-
-    # Normalize solution
-    solution = shooting.normalize_solution(grid, solution)
+    # Solve the differential equation, including matching forward and backward solutions and normalization
+    solution = shooting.solve_equation(solution_forward_first, solution_forward_second, solution_backward_last,
+                                       solution_backward_second_last, grid, potential, eigenvalue_guess, turning_point,
+                                       shooting.solution_next)
 
     # Plot both solutions and analytic solution
     fig, ax = plt.subplots(2, sharex=True)
@@ -267,13 +254,13 @@ def excitons3b():
     # Set up equidistant grid, in log space
     # Then transform to a grid in \rho space
     grid_points = 10000
-    grid_displacement = np.log(10**-5)
-    grid_end = np.log(10)
+    grid_displacement = np.log(10**-3.5)
+    grid_end = np.log(80)
     grid = np.linspace(grid_displacement, grid_end, grid_points)
     grid = np.exp(grid)
 
     # Guess an eigenvalue
-    eigenvalue_guess = -1
+    eigenvalue_guess = -0.111
 
     # Set up initial values for forward & backward solutions
     solution_first = grid[0]**2
