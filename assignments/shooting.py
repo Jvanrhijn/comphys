@@ -240,7 +240,8 @@ def excitons3a():
     # Shoot!
     max_iterations = 100
     tolerance = 10**-10
-    eigenvalues, derivative_continuities = shooting.shooting_method(grid, solution_first, solution_second,
+    eigenvalues, derivative_continuities = shooting.shooting_method(
+                                                                    grid, solution_first, solution_second,
                                                                     solution_last, solution_second_last,
                                                                     tolerance, max_iterations, potential,
                                                                     shooting.solution_next_numerov,
@@ -261,17 +262,18 @@ def excitons3b():
 
     def potential(x):
         return -2/x
+    angular_momentum = 0
 
     # Set up equidistant grid, in log space
     # Then transform to a grid in \rho space
-    grid_points = 1000
-    grid_displacement = np.log(10**-4)
-    grid_end = np.log(25)
+    grid_points = 10000
+    grid_displacement = np.log(10**-5)
+    grid_end = np.log(10)
     grid = np.linspace(grid_displacement, grid_end, grid_points)
     grid = np.exp(grid)
 
     # Guess an eigenvalue
-    eigenvalue_guess = -1.0
+    eigenvalue_guess = -1
 
     # Set up initial values for forward & backward solutions
     solution_first = grid[0]**2
@@ -282,10 +284,13 @@ def excitons3b():
     # Shoot!
     max_iterations = 100
     tolerance = 10**-8
-    eigenvalues, derivative_continuities = shooting.shooting_method(grid, solution_first, solution_second,
+    eigenvalues, derivative_continuities = shooting.shooting_method(
+                                                                    grid, solution_first, solution_second,
                                                                     solution_last, solution_second_last,
                                                                     tolerance, max_iterations, potential,
-                                                                    shooting.solution_next_log,
+                                                                    lambda *args: shooting.solution_next_log_numerov(
+                                                                        *args, angular_momentum=angular_momentum
+                                                                    ),
                                                                     eigenvalue_guess, algorithm='improved',
                                                                     )
     eigenvalue = eigenvalues[-1]
@@ -293,6 +298,8 @@ def excitons3b():
     # Solve equation
     turning_point = shooting.outer_turning_point(potential, eigenvalue, grid)
     solution = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last,
-                                       grid, potential, eigenvalue, turning_point, shooting.solution_next_log)
+                                       grid, potential, eigenvalue, turning_point,
+                                       lambda *args: shooting.solution_next_log_numerov(
+                                           *args, angular_momentum=angular_momentum))
 
     return grid, [np.sqrt(grid)*solution], [r"$\lambda = {0}$".format(round(eigenvalue, 4))]

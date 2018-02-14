@@ -13,6 +13,7 @@ def outer_turning_point(potential, energy, grid) -> int:
 
     :param potential: effective potential energy function
     :param energy: energy eigenvalue of particle
+    :param grid: grid to find the turning point on
     :return: index of turning point in grid
     """
     index = abs(potential(grid) - energy).argmin()
@@ -36,27 +37,51 @@ def solution_next(previous, p_previous, potential, energy, step_size, *grid_poin
     return 2 * previous - p_previous + step_size ** 2 * (potential(grid_points[0]) - energy) * previous
 
 
-def solution_next_log(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
+def solution_next_log(previous, p_previous, potential, energy, step_size, *grid_points, angular_momentum=0) -> float:
+    """Propagate solution using logarithmic grid, now including ugly hack to include angular momentum quantum numberQ
+
+    :param previous: previous value of solution ('n')
+    :param p_previous: previous previous value of solution ('n-1')
+    :param potential: effective potential energy function ('W')
+    :param energy: energy eigenvalue ('lambda')
+    :param step_size: step size ('h')
+    :param grid_points: grid points needed for algorithm, in this case only the current point is needed
+    :return: value of solution at next grid point
+    """
 
     # Transform step size for the propagation algorithm
     step_size /= grid_points[0]
 
-    return (2 * previous - p_previous + step_size ** 2 * (0.5**2 + ((potential(grid_points[0]) - energy)
+    return (2 * previous - p_previous + step_size ** 2 * ((0.5 + angular_momentum)**2 +
+                                                          ((potential(grid_points[0]) - energy)
                                                           * grid_points[0]**2)) * previous)
 
 
-def solution_next_log_numerov(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
+def solution_next_log_numerov(previous, p_previous, potential, energy, step_size, *grid_points, angular_momentum=0) -> float:
+    """Propagate solution using logarithmic grid and Numerov's algorithm, now including ugly hack to include
+    angular momentum quantum number!
+
+    :param previous: previous value of solution ('n')
+    :param p_previous: previous previous value of solution ('n-1')
+    :param potential: effective potential energy function ('W')
+    :param energy: energy eigenvalue ('lambda')
+    :param step_size: step size ('h')
+    :param grid_points: grid points needed for algorithm, in this case only the current point is needed
+    :param angular_momentum: angular momentum quantum number
+    :return: value of solution at next grid point
+    """
 
     # Transform step size for the propagation algorithm
     step_size /= grid_points[0]
 
+    # Kind of ugly and inefficient to define this here, but at least it keeps the notation tidy
     def q(grid_point):
-        return 1 - step_size**2/12 * (0.5**2 + (potential(grid_point) - energy)*grid_point**2)
+        return 1 - step_size**2/12*((angular_momentum + 0.5)**2 + (potential(grid_point) - energy)*grid_point**2)
 
-    next_value = 2*previous*(1 - q(grid_points[0])) + p_previous*(q(grid_points[1]) - 1)
-    next_value /= 1 - q(grid_points[2])
-
+    next_value = (12 - 10*q(grid_points[0]))*previous - q(grid_points[1])*p_previous
+    next_value /= q(grid_points[2])
     return next_value
+
 
 def solution_next_numerov(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
     """Propagate solution using Numerov's algorithm
@@ -244,6 +269,7 @@ def shooting_iteration_bisection(grid, solution_first, solution_second, solution
     solution_backward_mid = solve_equation_backward(solution_first, solution_second, grid, potential, mid_point,
                                                     turning_point_mid, propagate)
 
+    # Match the forward and backward solutions at the turning point
     solution_forward_left /= solution_forward_left[turning_point_left]
     solution_backward_left /= solution_backward_left[turning_point_left]
     solution_backward_mid /= solution_backward_mid[turning_point_mid]
