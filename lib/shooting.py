@@ -36,6 +36,28 @@ def solution_next(previous, p_previous, potential, energy, step_size, *grid_poin
     return 2 * previous - p_previous + step_size ** 2 * (potential(grid_points[0]) - energy) * previous
 
 
+def solution_next_log(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
+
+    # Transform step size for the propagation algorithm
+    step_size /= grid_points[0]
+
+    return (2 * previous - p_previous + step_size ** 2 * (0.5**2 + ((potential(grid_points[0]) - energy)
+                                                          * grid_points[0]**2)) * previous)
+
+
+def solution_next_log_numerov(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
+
+    # Transform step size for the propagation algorithm
+    step_size /= grid_points[0]
+
+    def q(grid_point):
+        return 1 - step_size**2/12 * (0.5**2 + (potential(grid_point) - energy)*grid_point**2)
+
+    next_value = 2*previous*(1 - q(grid_points[0])) + p_previous*(q(grid_points[1]) - 1)
+    next_value /= 1 - q(grid_points[2])
+
+    return next_value
+
 def solution_next_numerov(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
     """Propagate solution using Numerov's algorithm
 
@@ -71,6 +93,9 @@ def solve_equation_forward(solution_first, solution_second, grid, potential, ene
            points
     :return: solution (numpy array) obtained by forward propagation
     """
+    # Check that the turning point is internal to the domain
+    assert(turning_point_index not in [0, len(grid) - 1])
+
     solution = np.zeros(len(grid))
     solution[0], solution[1] = solution_first, solution_second
 
@@ -96,16 +121,16 @@ def solve_equation_backward(solution_last, solution_second_last, grid, potential
            points
     :return: solution (numpy array) obtained by forward propagation
     """
+    # Check that the turning point is internal to the domain
+    assert(turning_point_index not in [0, len(grid) - 1])
+
     solution = np.zeros(len(grid))
     solution[-1], solution[-2] = solution_last, solution_second_last
-
-    # Choose algorithm
 
     for n in range(len(grid) - 3, turning_point_index - 2, -1):
         step_size = grid[n] - grid[n-1]
         solution[n] = propagate(solution[n+1], solution[n+2], potential, energy, step_size,
                                 grid[n+1], grid[n+2], grid[n])
-
     return solution
 
 
@@ -252,7 +277,6 @@ def shooting_iteration_improved(solution_first, solution_second, solution_last, 
            points
     :return: new eigenvalue guess, measure of derivative continuity, whether the algorithm has converged sufficiently
     """
-    step_size = min(np.diff(grid))
     turning_point = outer_turning_point(potential, eigenvalue_guess, grid)
 
     solution_left = solve_equation_forward(solution_first, solution_second,
@@ -266,11 +290,19 @@ def shooting_iteration_improved(solution_first, solution_second, solution_last, 
     solution_right /= solution_right[turning_point]
 
     # Use trapezoidal integration to calculate factor 'A'
-    factor = (np.trapz(solution_left[:turning_point]**2, grid[:turning_point])
-              + np.trapz(solution_right[turning_point:]**2, grid[turning_point:]))**-1
+    # Now including ugly hack to make a special case for a logarithmic grid!
+    if propagate == solution_next_log:
+        factor = (np.trapz(grid[:turning_point]**2*solution_left[:turning_point]**2,
+                           np.log(grid[:turning_point]))
+                  + np.trapz(grid[turning_point:]**2*solution_right[turning_point:]**2,
+                             np.log(grid[turning_point:])))**-1
+    else:
+        factor = (np.trapz(solution_left[:turning_point]**2, grid[:turning_point])
+                  + np.trapz(solution_right[turning_point:]**2, grid[turning_point:]))**-1
     derivative_continuity = continuity_measure_function(solution_left, solution_right, turning_point)
 
     # Get next eigenvalue guess
+    step_size = np.diff(grid)[turning_point]
     eigenvalue_guess -= factor*derivative_continuity/(2*step_size)
 
     # Check for convergence

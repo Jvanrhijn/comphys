@@ -255,3 +255,44 @@ def excitons3a():
 
     return grid, [solution], [r"$\lambda = {0}$".format(round(eigenvalue, 4))]
 
+
+@plot_single_window(r"$\rho$", r"$\eta(u)$")
+def excitons3b():
+
+    def potential(x):
+        return -2/x
+
+    # Set up equidistant grid, in log space
+    # Then transform to a grid in \rho space
+    grid_points = 1000
+    grid_displacement = np.log(10**-4)
+    grid_end = np.log(25)
+    grid = np.linspace(grid_displacement, grid_end, grid_points)
+    grid = np.exp(grid)
+
+    # Guess an eigenvalue
+    eigenvalue_guess = -1.0
+
+    # Set up initial values for forward & backward solutions
+    solution_first = grid[0]**2
+    solution_second = grid[1]**2
+    solution_last = np.exp(-np.sqrt(-eigenvalue_guess)*grid[-1])
+    solution_second_last = np.exp(-np.sqrt(-eigenvalue_guess)*grid[-2])
+
+    # Shoot!
+    max_iterations = 100
+    tolerance = 10**-8
+    eigenvalues, derivative_continuities = shooting.shooting_method(grid, solution_first, solution_second,
+                                                                    solution_last, solution_second_last,
+                                                                    tolerance, max_iterations, potential,
+                                                                    shooting.solution_next_log,
+                                                                    eigenvalue_guess, algorithm='improved',
+                                                                    )
+    eigenvalue = eigenvalues[-1]
+
+    # Solve equation
+    turning_point = shooting.outer_turning_point(potential, eigenvalue, grid)
+    solution = shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last,
+                                       grid, potential, eigenvalue, turning_point, shooting.solution_next_log)
+
+    return grid, [np.sqrt(grid)*solution], [r"$\lambda = {0}$".format(round(eigenvalue, 4))]
