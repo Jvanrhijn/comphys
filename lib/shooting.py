@@ -46,6 +46,7 @@ def solution_next_log(previous, p_previous, potential, energy, step_size, *grid_
     :param energy: energy eigenvalue ('lambda')
     :param step_size: step size ('h')
     :param grid_points: grid points needed for algorithm, in this case only the current point is needed
+    :param angular_momentum: angular momentum quantum number
     :return: value of solution at next grid point
     """
 
@@ -57,7 +58,8 @@ def solution_next_log(previous, p_previous, potential, energy, step_size, *grid_
                                                           * grid_points[0]**2)) * previous)
 
 
-def solution_next_log_numerov(previous, p_previous, potential, energy, step_size, *grid_points, angular_momentum=0) -> float:
+def solution_next_log_numerov(previous, p_previous, potential, energy, step_size, *grid_points, angular_momentum=0) \
+        -> float:
     """Propagate solution using logarithmic grid and Numerov's algorithm, now including ugly hack to include
     angular momentum quantum number!
 
@@ -317,7 +319,7 @@ def shooting_iteration_improved(solution_first, solution_second, solution_last, 
 
     # Use trapezoidal integration to calculate factor 'A'
     # Now including ugly hack to make a special case for a logarithmic grid!
-    if propagate == solution_next_log:
+    if propagate == (solution_next_log or solution_next_log_numerov):
         factor = (np.trapz(grid[:turning_point]**2*solution_left[:turning_point]**2,
                            np.log(grid[:turning_point]))
                   + np.trapz(grid[turning_point:]**2*solution_right[turning_point:]**2,

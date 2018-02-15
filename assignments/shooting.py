@@ -4,7 +4,7 @@ import numpy as np
 from decorators.decorators import *
 import matplotlib.pyplot as plt
 from matplotlib import rc
-rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
+rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 12})
 rc('text', usetex=True)
 
 
@@ -212,7 +212,7 @@ def excitons3a():
     # Set up equidistant grid
     grid_points = 10000
     grid_displacement = 10**-5
-    grid_end = 75
+    grid_end = 30
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
 
     # Guess an eigenvalue
@@ -244,29 +244,29 @@ def excitons3a():
     return grid, [solution], [r"$\lambda = {0}$".format(round(eigenvalue, 4))]
 
 
-@plot_single_window(r"$\rho$", r"$\eta(u)$")
+@plot_single_window(r"$\rho$", r"$\zeta(\rho)$")
 def excitons3b():
 
     def potential(x):
         return -2/x
-    angular_momentum = 0
+    angular_momentum = 1
 
     # Set up equidistant grid, in log space
     # Then transform to a grid in \rho space
     grid_points = 10000
-    grid_displacement = np.log(10**-3.5)
-    grid_end = np.log(80)
+    grid_displacement = np.log(10**-5)
+    grid_end = np.log(30)
     grid = np.linspace(grid_displacement, grid_end, grid_points)
     grid = np.exp(grid)
 
     # Guess an eigenvalue
-    eigenvalue_guess = -0.111
+    eigenvalue_guess = -0.4
 
     # Set up initial values for forward & backward solutions
     solution_first = grid[0]**2
     solution_second = grid[1]**2
-    solution_last = np.exp(-np.sqrt(-eigenvalue_guess)*grid[-1])
-    solution_second_last = np.exp(-np.sqrt(-eigenvalue_guess)*grid[-2])
+    solution_last = np.exp(-grid[-1])
+    solution_second_last = np.exp(-grid[-2])
 
     # Shoot!
     max_iterations = 100
@@ -289,4 +289,69 @@ def excitons3b():
                                        lambda *args: shooting.solution_next_log_numerov(
                                            *args, angular_momentum=angular_momentum))
 
-    return grid, [np.sqrt(grid)*solution], [r"$\lambda = {0}$".format(round(eigenvalue, 4))]
+    return grid, [solution], [r"$\lambda = {0}$".format(round(eigenvalue, 4))]
+
+
+@plot_single_window(r"$\rho$", r"\zeta(\rho)")
+def excitons4a():
+
+    def potential(x):
+        return -2/x
+
+    # Set up equidistant grid, in log space
+    # Then transform to a grid in \rho space
+    grid_points = 80000
+    grid_displacement = np.log(10**-5)
+    grid_end = np.log(80)
+    grid = np.linspace(grid_displacement, grid_end, grid_points)
+    grid = np.exp(grid)
+
+    # Set up initial values for forward & backward solutions
+    solution_first = grid[0]**2
+    solution_second = grid[1]**2
+    solution_last = np.exp(-grid[-1])
+    solution_second_last = np.exp(-grid[-2])
+
+    # Iteration parameters
+    tolerance = 10**-8
+    max_iterations = 100
+
+    # Set up lists of quantum numbers
+    principal_quantum_numbers = list(range(1, 6)) + [2, 3]
+    angular_momenta = [0]*5 + [1, 2]
+
+    # Calculate the eigenvalues by the shooting method
+    # Using the exact eigenvalues as "Guesses"
+    eigenvalues = []
+    labels = []
+    for n, angular_momentum in zip(principal_quantum_numbers, angular_momenta):
+        eigenvalue = -1/n**2
+        _eigenvalues = shooting.shooting_method(
+                                                grid, solution_first, solution_second,
+                                                solution_last, solution_second_last,
+                                                tolerance, max_iterations, potential,
+                                                lambda *args:
+                                                shooting.solution_next_log_numerov(
+                                                 *args, angular_momentum=angular_momentum
+                                                ),
+                                                eigenvalue, algorithm='improved'
+                                                )[0]
+        eigenvalues.append(_eigenvalues[-1])
+
+        # Some fun Pythonic goodness; generates list of labels to use in plotting
+        labels.append(r"{0}{1}, $\lambda = {2}$".format(n, "s" if angular_momentum == 0
+                                                        else "p" if angular_momentum == 1 else "d",
+                                                        round(eigenvalues[-1], 4)))
+
+    # Calculate solutions from obtained eigenvalues
+    turning_points = [shooting.outer_turning_point(potential, eigenvalue, grid) for eigenvalue in eigenvalues]
+    solutions = [
+                    shooting.solve_equation(solution_first, solution_second, solution_last, solution_second_last,
+                                            grid, potential, eigenvalue, turning_point,
+                                            lambda *args: shooting.solution_next_log_numerov(
+                                             *args, angular_momentum=angular_momentum))
+                    for eigenvalue, turning_point, angular_momentum in zip(eigenvalues, turning_points, angular_momenta)
+                ]
+
+    return grid, solutions, labels
+
