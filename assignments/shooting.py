@@ -57,15 +57,15 @@ def excitons1c():
     # Plot both solutions and analytic solution
     fig, ax = plt.subplots(2, sharex=True)
     ax[0].plot(grid, analytic_solution, label="Analytic solution")
-    ax[0].plot(grid[0:turning_point+1], solution[0:turning_point+1], label="Forward solution")
-    ax[0].plot(grid[turning_point:], solution[turning_point:], label="Backward solution")
+    ax[0].plot(grid[0:turning_point+1], solution[0:turning_point+1], 'x', label="Forward solution")
+    ax[0].plot(grid[turning_point:], solution[turning_point:], 'x', label="Backward solution")
     ax[1].set_xlabel(r"$\rho$")
     ax[0].set_ylabel(r"$\zeta(\rho)$")
-    ax[1].set_ylabel(r"$\zeta(\rho) - \zeta_{00}(\rho)$, $10^{-4}$")
+    ax[1].set_ylabel(r"$\zeta(\rho) - \zeta_{00}(\rho)$")
 
     # Plot relative error
     error = solution - analytic_solution
-    ax[1].plot(grid, error*10**4)
+    ax[1].plot(grid, error)
     ax[0].legend()
 
     return ax
