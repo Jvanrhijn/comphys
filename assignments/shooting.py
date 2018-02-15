@@ -293,16 +293,17 @@ def excitons3b():
 
 
 @plot_single_window(r"$\rho$", r"\zeta(\rho)")
-def excitons4a():
+def excitons4a(potential=None):
 
-    def potential(x):
-        return -2/x
+    if potential is None:
+        def potential(x):
+            return -2/x
 
     # Set up equidistant grid, in log space
     # Then transform to a grid in \rho space
-    grid_points = 80000
-    grid_displacement = np.log(10**-5)
-    grid_end = np.log(80)
+    grid_points = 10000
+    grid_displacement = np.log(10**-4)
+    grid_end = np.log(100)
     grid = np.linspace(grid_displacement, grid_end, grid_points)
     grid = np.exp(grid)
 
@@ -326,6 +327,7 @@ def excitons4a():
     labels = []
     for n, angular_momentum in zip(principal_quantum_numbers, angular_momenta):
         eigenvalue = -1/n**2
+        print("Shooting with eigenvalue guess {0}".format(eigenvalue))
         _eigenvalues = shooting.shooting_method(
                                                 grid, solution_first, solution_second,
                                                 solution_last, solution_second_last,
@@ -337,6 +339,7 @@ def excitons4a():
                                                 eigenvalue, algorithm='improved'
                                                 )[0]
         eigenvalues.append(_eigenvalues[-1])
+        print("Converged! Eigenvalue found: {0}".format(eigenvalues[-1]))
 
         # Some fun Pythonic goodness; generates list of labels to use in plotting
         labels.append(r"{0}{1}, $\lambda = {2}$".format(n, "s" if angular_momentum == 0
@@ -353,5 +356,69 @@ def excitons4a():
                     for eigenvalue, turning_point, angular_momentum in zip(eigenvalues, turning_points, angular_momenta)
                 ]
 
+    # Print a table for in 4b
+    print(shooting.generate_latex_table(
+        [label[:2] for label in labels],
+        [eigenvalue * 0.2748744547718782 + 2.17202 for eigenvalue in eigenvalues],
+        "State", "Energy"))
+
     return grid, solutions, labels
+
+
+def excitons4b():
+    # Enter fundamental constants
+    hbar = 1.0545718 * 10**-34  # Js
+    electric_constant = 8.85418782 * 10**-12  # m**-3 kg**-1 s**4 A**2
+    electron_mass = 9.10938356 * 10**-31  # kg
+    dielectric_constant = 7.5 * electric_constant
+    electron_charge = 1.60217662 * 10**-19
+    reduced_mass = 0.99*0.57/(0.99 + 0.57)*electron_mass
+    characteristic_radius = 4*np.pi*dielectric_constant*hbar**2/(reduced_mass*electron_charge**2)
+
+    print("Characteristic radius = {} nm".format(characteristic_radius*10**9))
+
+    Rydberg = reduced_mass*electron_charge**2/(32*np.pi*dielectric_constant**2*hbar**2)
+
+
+@plot_single_window(r"$\rho$", r"$V(\rho)/V_0$")
+def excitons4c():
+
+    def coulomb(x):
+        return -2/x
+
+    electric_constant = 8.85418782 * 10**-12  # m**-3 kg**-1 s**4 A**2
+    eps = 7.5 * electric_constant
+    eps_1 = 7.11 * eps
+    eps_2 = 6.45 * eps
+    characteristic_radius = 1.0971776306592957
+    rho_p1 = 3.573/characteristic_radius
+    rho_m1 = 2.711/characteristic_radius
+    rho_p2 = 1.656/characteristic_radius
+    rho_m2 = 1.257/characteristic_radius
+
+    def haken(x):
+        return -2/x * (1 - 0.5*(np.e**(-x/rho_p1) + np.e**(-x/rho_m1)) + eps/eps_1 *
+                       (0.5*(np.e**(-x/rho_p1) + np.e**(-x/rho_m1)) - 0.5*(np.e**(-x/rho_p2) + np.e**(-x/rho_m2)))
+                       + eps/eps_2 * 0.5*(np.e**(-x/rho_p2) + np.e**(-x/rho_m2)))
+
+    grid = np.linspace(0.5, 8, 1000)
+    labels = ["Coulomb potential", "Haken potential"]
+
+    return grid, [coulomb(grid), haken(grid)], labels
+
+
+def excitons4d():
+
+    # Haken potential; the magic numbers are calculated from the given constants
+    # Improves speed versus defining them or calculating them in the function body
+    def haken(x):
+        return -2/x * (1
+                       - 0.5*(np.e**(-x/3.256537410312475) + np.e**(-x/2.4708852279197084))
+                       + 0.14064697609001403
+                       * (0.5*(np.e**(-x/3.256537410312475) + np.e**(-x/2.4708852279197084))
+                          - 0.5*(np.e**(-x/1.5093271624622049) + np.e**(-x/1.145666813535623)))
+                       + 0.1550387596899225
+                       * 0.5*(np.e**(-x/1.5093271624622049) + np.e**(-x/1.145666813535623)))
+
+    excitons4a(potential=haken)
 

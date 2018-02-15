@@ -55,10 +55,10 @@ def single_plot(assignment):
 def plot_single_window(*args):
     """Plot multiple lines in a single window"""
     def decorator(assignment):
-        def wrapper():
+        def wrapper(**kwargs):
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            x, y_arrays, plot_labels = assignment()
+            x, y_arrays, plot_labels = assignment(**kwargs)
             for y, label in zip(y_arrays, plot_labels):
                 ax.plot(x, y, label=label)
             ax.set_xlabel(args[0])

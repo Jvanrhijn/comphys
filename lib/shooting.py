@@ -16,9 +16,7 @@ def outer_turning_point(potential, energy, grid) -> int:
     :param grid: grid to find the turning point on
     :return: index of turning point in grid
     """
-    index = abs(potential(grid) - energy).argmin()
-
-    return index
+    return abs(potential(grid) - energy).argmin()
 
 
 def solution_next(previous, p_previous, potential, energy, step_size, *grid_points) -> float:
@@ -237,8 +235,9 @@ def continuity_measure_function(solution_left, solution_right, turning_point) ->
     :param turning_point: turning point index
     :return: derivative continuity measure at turning point
     """
-    return (solution_right[turning_point+1] - solution_right[turning_point-1]
-            - (solution_left[turning_point+1] - solution_left[turning_point-1]))
+    # The magic number 0.3 is a damping factor to ensure convergence for the haken potential
+    return 0.1*(solution_right[turning_point+1] - solution_right[turning_point-1]
+                - (solution_left[turning_point+1] - solution_left[turning_point-1]))
 
 
 def shooting_iteration_bisection(grid, solution_first, solution_second, solution_last, solution_second_last,
