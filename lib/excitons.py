@@ -1,5 +1,5 @@
 import numpy as np
-import util.util as util
+import lib.util.util as util
 import matplotlib.pyplot as plt
 import unittest
 
@@ -117,7 +117,7 @@ class SchrodingerSolver(object):
 
     def solve_backward(self, propagator):
         p_previous = self.boundary_right[1]
-        previous = self.boundary_left[0]
+        previous = self.boundary_right[0]
         index = len(self.grid) - 2
         while index > self.turning_point_index - 3:
             # Pass in a reversed int, since the base propagation algorithms assume that the next value is index + 1.
@@ -133,7 +133,8 @@ class SchrodingerSolver(object):
     def propagate_simple(previous, p_previous, grid, potential, step_size, eigenvalue, angular_momentum, index):
         """Return next value of solution, give two previous values and index, using the simple propagation algorithm"""
         next_value = 2*previous - p_previous \
-            + step_size[index]**2*(potential[index] - eigenvalue)*previous
+            + step_size[index]**2*(potential[index] + angular_momentum*(angular_momentum + 1)/grid[index]**2
+                                   - eigenvalue)*previous
         return next_value
 
     @staticmethod
@@ -150,13 +151,13 @@ class SchrodingerSolver(object):
     @staticmethod
     def propagate_numerov(previous, p_previous, grid, potential, step_size, eigenvalue, angular_momentum, index):
         """Return next value of solution, given two previous values and index, using Numverov's method"""
-        next_value = (5*step_size[index]**2/6*(
-                potential[index] + angular_momentum*(angular_momentum + 1)/grid[index]**2
-                - eigenvalue) + 2)*previous \
-            - (1 - step_size[index-1]**2/12*(potential[index-1]
-                                             + angular_momentum*(angular_momentum + 1)
-                                             - eigenvalue))*p_previous
-        next_value /= 1 - step_size[index+1]**2/12*(potential[index+1] - eigenvalue)
+
+        def q(idx):
+            return 1 - step_size[idx]**2/12*(potential[idx]
+                                             + angular_momentum*(angular_momentum + 1)/grid[idx]**2 - eigenvalue)
+        next_value = (12 - 10*q(index))*previous - q(index - 1)*p_previous
+        next_value /= q(index + 1)
+
         return next_value
 
     @staticmethod
@@ -202,7 +203,8 @@ class Shooter(object):
 
         if np.sign(derivative_continuity_left) == np.sign(derivative_continuity_mid):
             new_mid_point = 0.5 * (mid_point + right_bound)
-            return new_mid_point, abs(new_mid_point - mid_point) < tolerance, mid_point, right_bound
+            return new_mid_point, abs(new_mid_point - mid_point) < tolerance, derivative_continuity_mid,\
+                mid_point, right_bound
         else:
             new_mid_point = 0.5 * (left_bound + mid_point)
             return new_mid_point, abs(new_mid_point - mid_point) < tolerance, derivative_continuity_mid, \
@@ -212,7 +214,8 @@ class Shooter(object):
         """Do one iteration of the improved algorithm"""
         solver = self.get_solver(eigenvalue_guess)
         solution, derivative_continuity = solver.solve(propagator)
-        factor = solution[solver.turning_point_index]**2
+        # The magic number 0.2 is a damping factor, without which the calculation tends to overshoot
+        factor = 0.2*solution[solver.turning_point_index]**2
         eigenvalue_guess -= factor*derivative_continuity/(2*solver.step_size[solver.turning_point_index])
 
         return eigenvalue_guess, abs(factor*derivative_continuity) < tolerance, derivative_continuity, \
@@ -309,16 +312,18 @@ class ShooterTest(unittest.TestCase):
         def potential(x):
             return -2/x
 
-        grid = np.linspace(np.log(10**-5), np.log(20), 8000)
-        grid = np.exp(grid)
+        grid = np.linspace(10**-5, 100, 10000)
         boundary_left = (grid[0], grid[1])
-        boundary_right = (grid[-2]*np.exp(-grid[-2]**2/4), grid[-1]*np.exp(-grid[-1]**2/4))
-        angular_momentum = 0
+        boundary_right = (np.exp(-np.sqrt(0.25)*grid[-2]), np.exp(-np.sqrt(0.25)*grid[-1]))
+        angular_momentum = 2
         shooter = Shooter(grid, potential, boundary_left, boundary_right, angular_momentum)
 
-        eigenvalues, derivative_continuities = shooter.shooter(10**-8, SchrodingerSolver.propagate_numerov_log,
-                                                               shooter.improved_iteration, -0.45)
-        table = util.generate_latex_table(eigenvalues, derivative_continuities, "$\lambda$", "$F(\lambda)$")
+        solution = shooter.get_solver(-0.111).solve(SchrodingerSolver.propagate_numerov)[0]
+        fig, ax = plt.subplots()
+        solution.plot(ax)
+        plt.show()
+        #eigenvalues, derivative_continuities = shooter.shooter(10**-8, SchrodingerSolver.propagate_simple,
+                                                               #shooter.improved_iteration, -0.25)
 
 
 if __name__ == "__main__":
