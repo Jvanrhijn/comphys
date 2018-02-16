@@ -33,7 +33,7 @@ def excitons1c():
 
     # Set up equidistant grid
     grid_points = 100
-    grid_displacement = 0
+    grid_displacement = 10**-5
     grid_end = 5
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
 
@@ -72,7 +72,7 @@ def excitons2a():
 
     # Set up equidistant grid
     grid_points = 100
-    grid_displacement = 0
+    grid_displacement = 10**-5
     grid_end = 5
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
 
@@ -104,7 +104,7 @@ def excitons2b():
 
     # Set up equidistant grid
     grid_points = 100
-    grid_displacement = 0
+    grid_displacement = 10**-5
     grid_end = 5
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
 
@@ -147,7 +147,7 @@ def excitons2c():
 
     # Set up equidistant grid
     grid_points = 100
-    grid_displacement = 0
+    grid_displacement = 10**-5
     grid_end = 5
     grid = np.linspace(0, grid_end, grid_points) + grid_displacement
 
@@ -247,7 +247,7 @@ def excitons4a(potential=None):
 
     # Set up equidistant grid, in log space
     # Then transform to a grid in \rho space
-    grid_points = 80000
+    grid_points = 8000
     grid_displacement = np.log(10**-4)
     grid_end = np.log(100)
     grid = np.linspace(grid_displacement, grid_end, grid_points)
@@ -352,5 +352,6 @@ def excitons4d():
                        + 0.1550387596899225
                        * 0.5*(np.e**(-x/1.5093271624622049) + np.e**(-x/1.145666813535623)))
 
+    # Stupid hack so I don't have to rewrite exercise 4a
     excitons4a(potential=haken)
 

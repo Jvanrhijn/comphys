@@ -5,7 +5,7 @@ Command line args syntax:
     Example: comphys excitons1b
 """
 import sys
-import assignments.shooting as assignments
+import assignments.excitons as assignments
 
 
 usage = """

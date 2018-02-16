@@ -37,7 +37,7 @@ class WaveFunction(object):
         self.values = np.delete(self.values, index)
         self.grid = np.delete(self.grid, index)
 
-    def value(self, grid_point) -> float:
+    def value(self, grid_point):
         """Returns value of wave function closest to the given grid point"""
         index = abs(self.grid - grid_point).argmin()
         return self.values[index]
@@ -47,7 +47,7 @@ class WaveFunction(object):
         norm = self.norm()
         self.values /= norm
 
-    def norm(self) -> float:
+    def norm(self):
         """Returns the norm of the wave function"""
         return np.sqrt(np.trapz(np.absolute(self.values)**2, self.grid))
 
@@ -118,15 +118,14 @@ class SchrodingerSolver(object):
     def solve_backward(self, propagator):
         p_previous = self.boundary_right[1]
         previous = self.boundary_right[0]
-        index = len(self.grid) - 2
-        while index > self.turning_point_index - 3:
-            # Pass in a reversed int, since the base propagation algorithms assume that the next value is index + 1.
-            # In this case it is index - 1, so we can pass in the ReversedInt class, which reverses adding and
-            # subtracting. A nice way to abuse Python's everything-is-an-object model.
+        index = 1
+        # Revert arrays for the backward iteration
+        potential, step_size, grid = self.potential[::-1], self.step_size[::-1], self.grid[::-1]
+        while index < len(self.grid) - (self.turning_point_index - 2):
             yield p_previous
-            next_value = propagator(previous, p_previous, self.grid, self.potential, self.step_size,  self.eigenvalue,
-                                    self.angular_momentum, ReversedInt(index))
-            index -= 1
+            next_value = propagator(previous, p_previous, grid, potential, step_size,  self.eigenvalue,
+                                    self.angular_momentum, index)
+            index += 1
             p_previous, previous = previous, next_value
 
     @staticmethod
@@ -234,97 +233,3 @@ class Shooter(object):
             eigenvalues.append(eigenvalue)
         return eigenvalues, derivative_continuities
 
-
-class ReversedInt(int):
-    """This class is an integer type with adding and subtracting reversed."""
-    def __add__(self, other):
-        return int.__sub__(self, other)
-
-    def __sub__(self, other):
-        return int.__add__(self, other)
-
-
-class WaveFunctionTest(unittest.TestCase):
-    """Tests for classses in this module"""
-    def __init__(self, *args, **kwargs):
-        super(WaveFunctionTest, self).__init__(*args, **kwargs)
-        self.grid = np.linspace(0, 1, 100)
-        self.values_first = np.random.rand(len(self.grid))
-        self.values_second = np.random.rand(len(self.grid))
-        self.wf_first = WaveFunction(self.grid, values=self.values_first)
-        self.wf_second = WaveFunction(self.grid, values=self.values_second)
-
-    def test_wf_value(self):
-        self.assertEqual(self.values_first[40], self.wf_first.value(self.grid[40]))
-
-    def test_wf_add(self):
-        np.testing.assert_array_almost_equal(self.values_first + self.values_second,
-                                             (self.wf_first + self.wf_second).values)
-        with self.assertRaises(ValueError):
-            wf_temp = WaveFunction(np.linspace(0, 2, 100), values=np.random.random(len(self.grid)))
-            self.wf_first + wf_temp
-
-    def test_wf_subtract(self):
-        np.testing.assert_array_almost_equal(self.values_first - self.values_second,
-                                             (self.wf_first - self.wf_second).values)
-        with self.assertRaises(ValueError):
-            wf_temp = WaveFunction(np.linspace(0, 2, 100), values=np.random.random(len(self.grid)))
-            self.wf_first - wf_temp
-
-    def test_wf_accessors(self):
-        self.assertEqual(self.wf_first.values[0], self.wf_first[0])
-        self.wf_first[10] = 1.0
-        self.assertEqual(1.0, self.wf_first[10])
-        del self.wf_first[-1]
-        self.assertEqual(len(self.values_first) - 1, len(self.wf_first.values))
-        self.assertEqual(self.values_first[-2], self.wf_first[-1])
-        self.assertEqual(len(self.grid) - 1, len(self.wf_first.grid))
-
-    def test_wf_normalize(self):
-        self.wf_first.normalize()
-        self.assertAlmostEqual(1.0, self.wf_first.norm(), 6)
-
-    def test_wf_plot(self):
-        fig, ax = plt.subplots()
-        self.wf_first.plot(ax)
-        self.wf_second.plot(ax)
-
-
-class SolverTest(unittest.TestCase):
-    def test_harmonic_oscillator(self):
-
-        def potential(x):
-            return 0.25*x**2
-        grid = np.linspace(np.log(10**-5), np.log(20), 80000)
-        grid = np.exp(grid)
-        boundary_left = (grid[0], grid[1])
-        boundary_right = (grid[-2]*np.exp(-grid[-2]**2/4), grid[-1]*np.exp(-grid[-1]**2/4))
-        angular_momentum = 0
-        solver = SchrodingerSolver(grid, potential, 1.5, angular_momentum, boundary_left, boundary_right)
-        wave_function, derivative_continuity = solver.solve(solver.propagate_numerov_log)
-        fig, ax = plt.subplots()
-        wave_function.plot(ax)
-
-
-class ShooterTest(unittest.TestCase):
-    def test_shooter(self):
-
-        def potential(x):
-            return -2/x
-
-        grid = np.linspace(10**-5, 100, 10000)
-        boundary_left = (grid[0], grid[1])
-        boundary_right = (np.exp(-np.sqrt(0.25)*grid[-2]), np.exp(-np.sqrt(0.25)*grid[-1]))
-        angular_momentum = 2
-        shooter = Shooter(grid, potential, boundary_left, boundary_right, angular_momentum)
-
-        solution = shooter.get_solver(-0.111).solve(SchrodingerSolver.propagate_numerov)[0]
-        fig, ax = plt.subplots()
-        solution.plot(ax)
-        plt.show()
-        #eigenvalues, derivative_continuities = shooter.shooter(10**-8, SchrodingerSolver.propagate_simple,
-                                                               #shooter.improved_iteration, -0.25)
-
-
-if __name__ == "__main__":
-    unittest.main()
