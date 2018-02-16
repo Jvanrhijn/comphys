@@ -1,5 +1,6 @@
 import sys
-import lib.shooting as shooting
+import lib.excitons as excitons
+import lib.util.util as util
 import numpy as np
 from decorators.decorators import *
 import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ def excitons1b():
     turning_points = np.zeros(len(grid))
 
     for n, energy in enumerate(energies):
-        turning_points[n] = grid[shooting.outer_turning_point(lambda x: 0.25*x**2, energy, grid)]
+        turning_points[n] = grid[abs((lambda x: 0.25*x**2)(grid) - energy).arming()]
 
     return energies, turning_points, r"$\lambda$", "Turning point"
 
