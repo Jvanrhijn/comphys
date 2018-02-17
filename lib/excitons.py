@@ -141,6 +141,7 @@ class SchrodingerSolver(object):
         """Return next value of solution, given two previous values and index,
         assuming a logarithmic grid
         """
+        # Transform the steo size for the propagation algorithm
         step_size = step_size[index]/grid[index]
 
         return (2*previous - p_previous + step_size**2*((0.5 + angular_momentum)**2 +
@@ -150,13 +151,11 @@ class SchrodingerSolver(object):
     @staticmethod
     def propagate_numerov(previous, p_previous, grid, potential, step_size, eigenvalue, angular_momentum, index):
         """Return next value of solution, given two previous values and index, using Numverov's method"""
-
         def q(idx):
             return 1 - step_size[idx]**2/12*(potential[idx]
                                              + angular_momentum*(angular_momentum + 1)/grid[idx]**2 - eigenvalue)
         next_value = (12 - 10*q(index))*previous - q(index - 1)*p_previous
         next_value /= q(index + 1)
-
         return next_value
 
     @staticmethod
@@ -167,7 +166,6 @@ class SchrodingerSolver(object):
         # Transform step size for the propagation algorithm
         step_size = step_size[index]/grid[index]
 
-        # Kind of ugly and inefficient to define this here, but at least it keeps the notation tidy
         def q(idx):
             return 1 - step_size**2/12*((angular_momentum + 0.5)**2
                                         + (potential[idx] - eigenvalue)*grid[idx]**2)
@@ -200,24 +198,24 @@ class Shooter(object):
         solution_left, derivative_continuity_left = solver_left.solve(propagator)
         solution_right, derivative_continuity_mid = solver_mid.solve(propagator)
 
+        # Get the new interval according to the bisection algorithm, and check for convergence
         if np.sign(derivative_continuity_left) == np.sign(derivative_continuity_mid):
             new_mid_point = 0.5 * (mid_point + right_bound)
-            return new_mid_point, abs(new_mid_point - mid_point) < tolerance, derivative_continuity_mid,\
-                mid_point, right_bound
+            return abs(new_mid_point - mid_point) < tolerance, derivative_continuity_mid, mid_point, right_bound
         else:
             new_mid_point = 0.5 * (left_bound + mid_point)
-            return new_mid_point, abs(new_mid_point - mid_point) < tolerance, derivative_continuity_mid, \
-                left_bound, mid_point
+            return abs(new_mid_point - mid_point) < tolerance, derivative_continuity_mid, left_bound, mid_point
 
     def improved_iteration(self, propagator, tolerance, eigenvalue_guess):
         """Do one iteration of the improved algorithm"""
         solver = self.get_solver(eigenvalue_guess)
         solution, derivative_continuity = solver.solve(propagator)
+
         # The magic number 0.2 is a damping factor, without which the calculation tends to overshoot
         factor = 0.2*solution[solver.turning_point_index]**2
         eigenvalue_guess -= factor*derivative_continuity/(2*solver.step_size[solver.turning_point_index])
 
-        return eigenvalue_guess, abs(factor*derivative_continuity) < tolerance, derivative_continuity, \
+        return abs(factor*derivative_continuity) < tolerance, derivative_continuity, \
             eigenvalue_guess
 
     @staticmethod
@@ -227,9 +225,8 @@ class Shooter(object):
         derivative_continuities = []
         eigenvalues = []
         while not converged:
-            eigenvalue, converged, derivative_continuity, \
-             *algorithm_inputs = iterator(propagator, tolerance, *algorithm_inputs)
+            converged, derivative_continuity, *algorithm_inputs = iterator(propagator, tolerance, *algorithm_inputs)
             derivative_continuities.append(derivative_continuity)
-            eigenvalues.append(eigenvalue)
+            eigenvalues.append(np.mean(algorithm_inputs))
         return eigenvalues, derivative_continuities
 

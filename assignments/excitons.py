@@ -51,8 +51,12 @@ def excitons1c():
 
     # Plot both solutions and analytic solution
     fig, ax = plt.subplots(2, sharex=True)
-    solution.plot(ax[0], '.')
-    analytic_solution.plot(ax[0])
+    solution.plot(ax[0], '.', label='Numerical')
+    analytic_solution.plot(ax[0], label='Analytical')
+    ax[0].legend()
+    ax[0].set_ylabel(r"$\zeta(\rho)$")
+    ax[1].set_ylabel(r"$\zeta(\rho) - \zeta_{00}(\rho)$")
+    ax[1].set_xlabel(r"$\rho$")
 
     # Plot relative error
     error = (solution - analytic_solution).values
@@ -247,7 +251,7 @@ def excitons4a(potential=None):
 
     # Set up equidistant grid, in log space
     # Then transform to a grid in \rho space
-    grid_points = 8000
+    grid_points = 80000
     grid_displacement = np.log(10**-4)
     grid_end = np.log(100)
     grid = np.linspace(grid_displacement, grid_end, grid_points)
@@ -342,7 +346,6 @@ def excitons4c():
 def excitons4d():
 
     # Haken potential; the magic numbers are calculated from the given constants
-    # Improves speed versus defining them or calculating them in the function body
     def haken(x):
         return -2/x * (1
                        - 0.5*(np.e**(-x/3.256537410312475) + np.e**(-x/2.4708852279197084))
