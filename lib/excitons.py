@@ -76,6 +76,8 @@ class SchrodingerSolver(object):
         self.eigenvalue = eigenvalue
         self.angular_momentum = angular_momentum
         self.turning_point_index = abs(self.potential - eigenvalue).argmin()
+        if self.turning_point_index in [0, len(grid)-1]:
+            raise IndexError("Turning point out of bounds; try expanding the grid or choosing a different eigenvalue.")
         self.turning_point = self.grid[self.turning_point_index]
         self.boundary_left = boundary_left
         self.boundary_right = boundary_right
@@ -206,13 +208,12 @@ class Shooter(object):
             new_mid_point = 0.5 * (left_bound + mid_point)
             return abs(new_mid_point - mid_point) < tolerance, derivative_continuity_mid, left_bound, mid_point
 
-    def improved_iteration(self, propagator, tolerance, eigenvalue_guess):
+    def improved_iteration(self, propagator, tolerance, eigenvalue_guess, damping=1.0):
         """Do one iteration of the improved algorithm"""
         solver = self.get_solver(eigenvalue_guess)
         solution, derivative_continuity = solver.solve(propagator)
 
-        # The magic number 0.2 is a damping factor, without which the calculation tends to overshoot
-        factor = 0.2*solution[solver.turning_point_index]**2
+        factor = damping*solution[solver.turning_point_index]**2
         eigenvalue_guess -= factor*derivative_continuity/(2*solver.step_size[solver.turning_point_index])
 
         return abs(factor*derivative_continuity) < tolerance, derivative_continuity, \

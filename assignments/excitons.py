@@ -243,7 +243,7 @@ def excitons3b():
 
 
 @plot_single_window(r"$\rho$", r"\zeta(\rho)")
-def excitons4a(potential=None):
+def excitons4a(potential=None, damping=1.0):
 
     if potential is None:
         def potential(x):
@@ -277,8 +277,11 @@ def excitons4a(potential=None):
         eigenvalue = -1/n**2
         print("Shooting with eigenvalue guess {0}".format(eigenvalue))
         shooter = excitons.Shooter(grid, potential, boundary_left, boundary_right, angular_momentum)
+
         _eigenvalues = shooter.shooter(tolerance, excitons.SchrodingerSolver.propagate_numerov_log,
-                                       shooter.improved_iteration, eigenvalue)[0]
+                                       lambda *args: shooter.improved_iteration(*args, damping=damping),
+                                       eigenvalue)[0]
+
         eigenvalues.append(_eigenvalues[-1])
         print("Converged! Eigenvalue found: {0}".format(eigenvalues[-1]))
 
@@ -356,5 +359,5 @@ def excitons4d():
                        * 0.5*(np.e**(-x/1.5093271624622049) + np.e**(-x/1.145666813535623)))
 
     # Stupid hack so I don't have to rewrite exercise 4a
-    excitons4a(potential=haken)
+    excitons4a(potential=haken, damping=0.2)
 
