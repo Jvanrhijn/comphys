@@ -5,7 +5,10 @@ Command line args syntax:
     Example: comphys excitons1b
 """
 import sys
-import assignments.excitons as assignments
+from assignments.excitons import *
+from assignments.monte_carlo import *
+import assignments.excitons as excitons
+import assignments.monte_carlo as monte_carlo
 
 
 usage = """
@@ -18,8 +21,8 @@ Example:
 
 if __name__ == "__main__":
     argument = sys.argv[1]
-    if argument in dir(assignments):
-        eval("assignments." + argument + "()")
+    if argument in dir(excitons) + dir(monte_carlo):
+        eval(argument + "()")
         exit(0)
     else:
         print(usage)
