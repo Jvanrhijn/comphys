@@ -109,25 +109,21 @@ class SchrodingerSolver(object):
     def solve_forward(self, propagator):
         p_previous = self.boundary_left[0]
         previous = self.boundary_left[1]
-        index = 1
-        while index < self.turning_point_index + 3:
+        for index in range(1, self.turning_point_index + 3):
             yield p_previous
             next_value = propagator(previous, p_previous, self.grid, self.potential, self.step_size,  self.eigenvalue,
                                     self.angular_momentum, index)
-            index += 1
             p_previous, previous = previous, next_value
 
     def solve_backward(self, propagator):
         p_previous = self.boundary_right[1]
         previous = self.boundary_right[0]
-        index = 1
         # Revert arrays for the backward iteration
         potential, step_size, grid = self.potential[::-1], self.step_size[::-1], self.grid[::-1]
-        while index < len(self.grid) - (self.turning_point_index - 2):
+        for index in range(1, len(self.grid) - (self.turning_point_index - 2)):
             yield p_previous
             next_value = propagator(previous, p_previous, grid, potential, step_size,  self.eigenvalue,
                                     self.angular_momentum, index)
-            index += 1
             p_previous, previous = previous, next_value
 
     @staticmethod
