@@ -48,7 +48,7 @@ class SpinConfiguration(object):
     @classmethod
     def init_random(cls, rows, columns):
         """Initialize a random spin configuration in the desired shape"""
-        return cls(np.random.randint(0, 2, (rows, columns))*2 - 1)
+        return cls(np.random.choice([1, -1], size=(rows, columns)))
 
     def __setitem__(self, row, column, value):
         """Set a spin to a value"""
@@ -66,7 +66,24 @@ class SpinConfiguration(object):
     def energy(self, magnetic_field, coupling):
         """Returns the total energy of the lattice"""
         magnetic_energy = -magnetic_field*self.magnetization()
-        pass
+        exchange_energy = 0
+        if coupling != 0:
+            exchange_energy = self._exchange_energy(coupling)
+        return magnetic_energy + exchange_energy
+
+    def _exchange_energy(self, coupling):
+        """Return exchange energy of the lattice"""
+        # Pad lattice with zeros to simplify exchange energy calculation
+        self._lattice = np.pad(self._lattice, (1, 1), 'constant', constant_values=(0, 0))
+        exchange_energy = 0
+        # Loop over original lattice
+        for i in range(1, self._lattice.shape[0]-1):
+            for j in range(1, self._lattice.shape[1]-1):
+                interaction = self._lattice[i-1, j] + self._lattice[i+1, j] \
+                              + self._lattice[i, j-1] + self._lattice[i, j+1]
+                exchange_energy += -coupling * self._lattice[i, j]*interaction
+        self._lattice = self._lattice[1:-1, 1:-1]  # Remove padding
+        return exchange_energy
 
     def flip_spin(self, row, column):
         """Flip a given spin in the lattice"""
@@ -106,7 +123,10 @@ class SpinConfigTest(unittest.TestCase):
         self.assertEqual(config.magnetization(), magnetization)
 
     def test_energy(self):
-        raise AssertionError
+        configuration = SpinConfiguration(np.array([[1, -1], [-1, -1]]))
+        magnetic_field, coupling = 1, 1
+        energy = 2  # Manual calculation
+        self.assertEqual(configuration.energy(magnetic_field, coupling), energy)
 
     def test_plot(self):
         configuration = SpinConfiguration.init_random(100, 100)
