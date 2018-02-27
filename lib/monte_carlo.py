@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 import matplotlib.pyplot as plt
 import lib.util as util
 import unittest
@@ -31,7 +32,7 @@ class SpinConfiguration(object):
     """Object representing spins on a lattice"""
     def __init__(self, lattice):
         if np.logical_or(np.equal(np.ones(lattice.shape), lattice), np.equal(np.ones(lattice.shape)*-1, lattice)).all():
-            self._lattice = lattice
+            self._lattice = copy.deepcopy(lattice)
         else:
             raise ValueError("All spins must be either up (1) or down (-1)")
 
@@ -89,6 +90,13 @@ class SpinConfiguration(object):
         """Flip a given spin in the lattice"""
         self._lattice[row, column] *= -1
 
+    def flip_random(self):
+        """Flips a random spin in the lattice"""
+        row = np.random.randint(0, high=self._lattice.shape[0])
+        column = np.random.randint(0, high=self._lattice.shape[1])
+        self.flip_spin(row, column)
+        return row, column
+
     def plot_lattice(self):
         """Creates a simple matshow of the spin configuration"""
         fig, ax = plt.subplots(1)
@@ -127,6 +135,16 @@ class SpinConfigTest(unittest.TestCase):
         magnetic_field, coupling = 1, 1
         energy = 2  # Manual calculation
         self.assertEqual(configuration.energy(magnetic_field, coupling), energy)
+
+    def test_flip(self):
+        some_lattice = np.array([[1, -1], [-1, -1]])
+        flipped = np.array([[1, 1], [-1, -1]])
+        configuration = SpinConfiguration(some_lattice)
+        configuration.flip_spin(0, 1)
+        np.testing.assert_array_equal(configuration._lattice, flipped)
+        random_flipped = SpinConfiguration(some_lattice)
+        row, column = random_flipped.flip_random()
+        self.assertEqual(random_flipped[row, column], some_lattice[row, column]*-1)
 
     def test_plot(self):
         configuration = SpinConfiguration.init_random(100, 100)
