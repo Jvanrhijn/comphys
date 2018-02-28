@@ -33,6 +33,8 @@ class SpinConfiguration(object):
     def __init__(self, lattice):
         if np.logical_or(np.equal(np.ones(lattice.shape), lattice), np.equal(np.ones(lattice.shape)*-1, lattice)).all():
             self._lattice = copy.deepcopy(lattice)
+            self._rows = lattice.shape[0]
+            self._columns = lattice.shape[1]
         else:
             raise ValueError("All spins must be either up (1) or down (-1)")
 
@@ -74,16 +76,16 @@ class SpinConfiguration(object):
 
     def _exchange_energy(self, coupling):
         """Return exchange energy of the lattice"""
-        # Pad lattice with zeros to simplify exchange energy calculation
-        self._lattice = np.pad(self._lattice, (1, 1), 'constant', constant_values=(0, 0))
         exchange_energy = 0
-        # Loop over original lattice
-        for i in range(1, self._lattice.shape[0]-1):
-            for j in range(1, self._lattice.shape[1]-1):
-                interaction = self._lattice[i-1, j] + self._lattice[i+1, j] \
-                              + self._lattice[i, j-1] + self._lattice[i, j+1]
+        for i in range(0, self._rows):
+            for j in range(0, self._columns):
+                # Interaction energy with periodic BC, don't need to modulo for negative indices since in Python
+                # list[-1] == list[len(list)-1].
+                interaction = self._lattice[i-1, j] \
+                              + self._lattice[(i+1) % self._rows, j] \
+                              + self._lattice[i, j-1] \
+                              + self._lattice[i, (j+1) % self._columns]
                 exchange_energy += -coupling * self._lattice[i, j]*interaction
-        self._lattice = self._lattice[1:-1, 1:-1]  # Remove padding
         return exchange_energy
 
     def flip_spin(self, row, column):
@@ -134,7 +136,7 @@ class SpinConfigTest(unittest.TestCase):
         configuration = SpinConfiguration(np.array([[1, -1], [-1, -1]]))
         magnetic_field, coupling = 1, 1
         energy = 2  # Manual calculation
-        self.assertEqual(configuration.energy(magnetic_field, coupling), energy)
+        self.assertEqual(energy, configuration.energy(magnetic_field, coupling))
 
     def test_flip(self):
         some_lattice = np.array([[1, -1], [-1, -1]])
