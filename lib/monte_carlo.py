@@ -142,7 +142,8 @@ class SpinConfiguration(object):
     def plot_lattice(self):
         """Creates a simple matshow of the spin configuration"""
         fig, ax = plt.subplots(1)
-        ax.matshow(self._lattice)
+        ax.pcolormesh(self._lattice, cmap='Greys')
+        plt.axis('equal')
         return fig, ax
 
 
@@ -191,6 +192,7 @@ class SpinConfigTest(unittest.TestCase):
     def test_plot(self):
         configuration = SpinConfiguration.init_random(100, 100)
         configuration.plot_lattice()
+        plt.show()
 
 
 if __name__ == '__main__':
