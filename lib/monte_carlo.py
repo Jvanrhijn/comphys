@@ -9,8 +9,12 @@ class MonteCarlo(object):
     """Base Monte Carlo simulator, defines virtual interface"""
     def __init__(self, num_runs):
         self._num_runs = num_runs
+        self._iteration_number = 0
 
     def init_state(self):
+        pass
+
+    def iterate(self):
         pass
 
     def plot_state(self, *args, **kwargs):
@@ -20,12 +24,48 @@ class MonteCarlo(object):
         pass
 
 
-class IsingModel(MonteCarlo):
-    """Ising model solver using Monte Carlo method"""
+class ParaMagnet(MonteCarlo):
+    """Ising model paramagnet solver using Monte Carlo method
+    and Metropolis algorithm with uniform proposal probability
+    """
     def __init__(self, num_runs, magnetic_field, lattice_side):
         super().__init__(num_runs)
         self._magnetic_field = magnetic_field
         self._lattice_side = lattice_side
+        self.energies = np.zeros(num_runs)
+        self.magnetizations = np.zeros(num_runs)
+        self.configuration = self.init_state()
+
+    @staticmethod
+    def move_accepted(energy_difference):
+        """Return whether to accept a move"""
+        if energy_difference <= 0:
+            return True
+        else:
+            boltzmann_factor = np.exp(-energy_difference)
+            random = np.random.random()
+            return random < boltzmann_factor
+
+    def init_state(self):
+        """Initialize the Monte Carlo simulator state"""
+        return SpinConfiguration.init_random(self._lattice_side, self._lattice_side)
+
+    def iterate(self):
+        """Do one Monte Carlo iteration, and save energy and magnetization"""
+        row, column = self.configuration.flip_random()
+        energy_difference = -2*self._magnetic_field*self.configuration[row, column]
+        magnetization_difference = 2*self.configuration[row, column]
+        if not self.move_accepted(energy_difference):
+            self.configuration.flip(row, column)  # Restore old configuration
+            energy_difference = 0
+            magnetization_difference = 0
+        self.energies[self._iteration_number] = self.energies[self._iteration_number-1] + energy_difference
+        self.magnetizations[self._iteration_number] = self.magnetizations[self._iteration_number-1] \
+            + magnetization_difference
+
+    def plot_state(self):
+        """Plot the current state of the Monte Carlo simulation"""
+        self.configuration.plot_lattice()
 
 
 class SpinConfiguration(object):
