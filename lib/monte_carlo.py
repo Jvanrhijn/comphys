@@ -235,18 +235,14 @@ class SpinConfigTest(unittest.TestCase):
         row, column = random_flipped.flip_random()
         self.assertEqual(random_flipped[row, column], some_lattice[row, column]*-1)
 
-    def test_plot(self):
-        configuration = SpinConfiguration.init_random(100, 100)
-        configuration.plot_lattice()
-
     def test_paramagnet(self):
-        mc_paramagnet = ParaMagnet(20000, 0.5, 10)
+        field = 0.5
+        mc_paramagnet = ParaMagnet(20000, field, 10)
+        exact_magnetization = np.tanh(field)
         mc_paramagnet.simulate()
-        fig_m, ax_m = plt.subplots(1)
-        ax_m.plot(mc_paramagnet.magnetizations)
         mean_magnetization, stdev = mc_paramagnet.mean_magnetization(2000)
         # Test may fail in 5% of cases
-        self.assertTrue(mean_magnetization - 2*stdev < mean_magnetization < mean_magnetization + 2*stdev)
+        self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
 
 
 if __name__ == '__main__':
