@@ -24,17 +24,20 @@ class MonteCarlo(object):
         pass
 
 
-class ParaMagnet(MonteCarlo):
-    """Ising model paramagnet solver using Monte Carlo method
-    and Metropolis algorithm with uniform proposal probability
+class Magnet(MonteCarlo):
+    """Ising model magnet Monte Carlo solver, base class for more specific models.
+    Uses the Metropolis algorithm for accepting or rejecting a move.
     """
-    def __init__(self, num_runs, magnetic_field, lattice_side):
+    def __init__(self, num_runs, lattice_side):
         super().__init__(num_runs)
-        self._magnetic_field = magnetic_field
         self._lattice_side = lattice_side
         self.energies = np.zeros(num_runs)
         self.magnetizations = np.zeros(num_runs)
         self.configuration = self.init_state()
+
+    def init_state(self):
+        """Initialize the Monte Carlo simulator state"""
+        return SpinConfiguration.init_random(self._lattice_side, self._lattice_side)
 
     @staticmethod
     def move_accepted(energy_difference):
@@ -46,15 +49,32 @@ class ParaMagnet(MonteCarlo):
             random = np.random.random()
             return random < boltzmann_factor
 
-    def init_state(self):
-        """Initialize the Monte Carlo simulator state"""
-        return SpinConfiguration.init_random(self._lattice_side, self._lattice_side)
+    def _energy_difference(self, *args):
+        """Calculate the energy difference between two consecutive iterations"""
+        pass
+
+    def _magnetization_difference(self, *args):
+        """Calculate the magnetization difference between two consecutive iterations"""
+        pass
+
+
+class ParaMagnet(Magnet):
+    """Ising model paramagnet Monte Carlo solver, inherits from Magnet class."""
+    def __init__(self, num_runs, magnetic_field, lattice_side):
+        super().__init__(num_runs, lattice_side)
+        self._magnetic_field = magnetic_field
+
+    def _energy_difference(self, flipped_row, flipped_column):
+        return -2*self._magnetic_field*self.configuration[flipped_row, flipped_column]
+
+    def _magnetization_difference(self, flipped_row, flipped_column):
+        return 2*self.configuration[flipped_row, flipped_column]
 
     def iterate(self):
         """Do one Monte Carlo iteration, and save energy and magnetization"""
         row, column = self.configuration.flip_random()
-        energy_difference = -2*self._magnetic_field*self.configuration[row, column]
-        magnetization_difference = 2*self.configuration[row, column]
+        energy_difference = self._energy_difference(row, column)
+        magnetization_difference = self._magnetization_difference(row, column)
         if not self.move_accepted(energy_difference):
             self.configuration.flip(row, column)  # Restore old configuration
             energy_difference = 0
@@ -192,7 +212,6 @@ class SpinConfigTest(unittest.TestCase):
     def test_plot(self):
         configuration = SpinConfiguration.init_random(100, 100)
         configuration.plot_lattice()
-        plt.show()
 
 
 if __name__ == '__main__':
