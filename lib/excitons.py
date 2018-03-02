@@ -88,8 +88,8 @@ class SchrodingerSolver(object):
         backward_generator = self.solve_backward(propagator)
 
         # Generate the forward and backward solutions
-        solution_forward = np.array([value for value in forward_generator])
-        solution_backward = np.flip(np.array([value for value in backward_generator]), 0)
+        solution_forward = np.array(list(forward_generator))
+        solution_backward = np.flipud(np.array(list(backward_generator)))
 
         # Scale the two solutions at the turning point, then calculate the derivative continuity
         solution_forward /= solution_forward[-2]
