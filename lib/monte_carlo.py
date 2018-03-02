@@ -10,11 +10,12 @@ class MonteCarlo(object):
     def __init__(self, num_runs):
         self._num_runs = num_runs
         self._iteration_number = 0
+        self._done = False
 
     def init_state(self):
         pass
 
-    def iterate(self):
+    def _iterate(self):
         pass
 
     def plot_state(self, *args, **kwargs):
@@ -22,6 +23,9 @@ class MonteCarlo(object):
 
     def variable_error(self):
         pass
+
+    def is_done(self):
+        return self._done
 
 
 class Magnet(MonteCarlo):
@@ -31,8 +35,8 @@ class Magnet(MonteCarlo):
     def __init__(self, num_runs, lattice_side):
         super().__init__(num_runs)
         self._lattice_side = lattice_side
-        self.energies = np.zeros(num_runs)
-        self.magnetizations = np.zeros(num_runs)
+        self.energies = np.zeros(num_runs+1)
+        self.magnetizations = np.zeros(num_runs+1)
         self.configuration = self.init_state()
 
     def init_state(self):
@@ -57,12 +61,34 @@ class Magnet(MonteCarlo):
         """Calculate the magnetization difference between two consecutive iterations"""
         pass
 
+    def simulate(self):
+        """Run num_runs iterations and collect results"""
+        for self._iteration_number in range(self._num_runs):
+            self._iterate()
+        self._done = True
+
+    def mean_energy(self, equilibration_time):
+        """Get mean energy and standard deviation"""
+        assert self._done
+        mean = np.mean(self.energies[equilibration_time:])
+        stdev = np.std(self.energies[equilibration_time:])
+        return mean, stdev
+
+    def mean_magnetization(self, equilibration_time):
+        """Get mean magnetization and standard deviation"""
+        assert self._done
+        mean = np.mean(self.magnetizations[equilibration_time:])/self._lattice_side**2
+        stdev = np.std(self.magnetizations[equilibration_time:])/self._lattice_side**2
+        return mean, stdev
+
 
 class ParaMagnet(Magnet):
     """Ising model paramagnet Monte Carlo solver, inherits from Magnet class."""
     def __init__(self, num_runs, magnetic_field, lattice_side):
         super().__init__(num_runs, lattice_side)
         self._magnetic_field = magnetic_field
+        self.energies[0] = self.configuration.energy(magnetic_field, 0)
+        self.magnetizations[0] = self.configuration.magnetization()
 
     def _energy_difference(self, flipped_row, flipped_column):
         return -2*self._magnetic_field*self.configuration[flipped_row, flipped_column]
@@ -70,22 +96,22 @@ class ParaMagnet(Magnet):
     def _magnetization_difference(self, flipped_row, flipped_column):
         return 2*self.configuration[flipped_row, flipped_column]
 
-    def iterate(self):
+    def _iterate(self):
         """Do one Monte Carlo iteration, and save energy and magnetization"""
         row, column = self.configuration.flip_random()
         energy_difference = self._energy_difference(row, column)
         magnetization_difference = self._magnetization_difference(row, column)
         if not self.move_accepted(energy_difference):
-            self.configuration.flip(row, column)  # Restore old configuration
+            self.configuration.flip_spin(row, column)  # Restore old configuration
             energy_difference = 0
             magnetization_difference = 0
-        self.energies[self._iteration_number] = self.energies[self._iteration_number-1] + energy_difference
-        self.magnetizations[self._iteration_number] = self.magnetizations[self._iteration_number-1] \
+        self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
+        self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
             + magnetization_difference
 
     def plot_state(self):
         """Plot the current state of the Monte Carlo simulation"""
-        self.configuration.plot_lattice()
+        return self.configuration.plot_lattice()
 
 
 class SpinConfiguration(object):
@@ -212,6 +238,15 @@ class SpinConfigTest(unittest.TestCase):
     def test_plot(self):
         configuration = SpinConfiguration.init_random(100, 100)
         configuration.plot_lattice()
+
+    def test_paramagnet(self):
+        mc_paramagnet = ParaMagnet(20000, 0.5, 10)
+        mc_paramagnet.simulate()
+        fig_m, ax_m = plt.subplots(1)
+        ax_m.plot(mc_paramagnet.magnetizations)
+        mean_magnetization, stdev = mc_paramagnet.mean_magnetization(2000)
+        # Test may fail in 5% of cases
+        self.assertTrue(mean_magnetization - 2*stdev < mean_magnetization < mean_magnetization + 2*stdev)
 
 
 if __name__ == '__main__':
