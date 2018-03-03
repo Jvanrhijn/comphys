@@ -1,8 +1,9 @@
-import numpy as np
+"""This module contains classes used for the Monte Carlo / Magnetism assignment."""
+import unittest
 import copy
+import numpy as np
 import matplotlib.pyplot as plt
 import lib.util as util
-import unittest
 
 
 class MonteCarlo(object):
@@ -13,21 +14,27 @@ class MonteCarlo(object):
         self._done = False
 
     def init_state(self):
+        """Initialize Monte Carlo simulator state"""
         pass
 
     def _iterate(self):
+        """Do one Monte Carlo iteration"""
         pass
 
     def plot_state(self, *args, **kwargs):
-        pass
-
-    def variable_error(self):
+        """Plot the Monte Carlo simulator state"""
         pass
 
     def is_done(self):
+        """Return whether the simulation is done"""
         return self._done
 
+    def simulate(self):
+        """Perform the Monte Carlo simulation"""
+        pass
+
     def reset(self):
+        """Reset the simulation"""
         self.__init__(self._num_runs)
 
 
@@ -47,6 +54,7 @@ class MagnetSolver(MonteCarlo):
         self.__init__(self._num_runs, self._lattice_side)
 
     def set_lattice_side(self, new_side):
+        """Change the lattice side"""
         self._lattice_side = new_side
 
     def init_state(self):
@@ -58,16 +66,15 @@ class MagnetSolver(MonteCarlo):
         """Return whether to accept a move"""
         if energy_difference <= 0:
             return True
-        else:
-            boltzmann_factor = np.exp(-energy_difference)
-            random = np.random.random()
-            return random < boltzmann_factor
+        boltzmann_factor = np.exp(-energy_difference)
+        random = np.random.random()
+        return random < boltzmann_factor
 
-    def _energy_difference(self, *args):
+    def _energy_difference(self, flipped_row, flipped_column):
         """Calculate the energy difference between two consecutive iterations"""
         return 0
 
-    def _magnetization_difference(self, *args):
+    def _magnetization_difference(self, flipped_row, flipped_column):
         """Calculate the magnetization difference between two consecutive iterations"""
         return 0
 
@@ -86,6 +93,7 @@ class MagnetSolver(MonteCarlo):
 
     def simulate(self):
         """Run num_runs iterations and collect results"""
+        assert not self._done
         for self._iteration_number in range(self._num_runs):
             self._iterate()
         self._done = True
@@ -117,6 +125,7 @@ class ParaMagnet(MagnetSolver):
         self.__init__(self._num_runs, self._magnetic_field, self._lattice_side)
 
     def set_magnetic_field(self, new_field):
+        """Change the magnetic field"""
         self._magnetic_field = new_field
 
     def _energy_difference(self, flipped_row, flipped_column):
@@ -257,6 +266,8 @@ class SpinConfigTest(unittest.TestCase):
         mean_magnetization, stdev = mc_paramagnet.mean_magnetization(200)
         # Test may fail in 5% of cases
         self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
+        with self.assertRaises(AssertionError):
+            mc_paramagnet.simulate()
 
     def test_reset(self):
         mc_paramagnet = ParaMagnet(2000, 1, 10)
