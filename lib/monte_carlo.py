@@ -28,7 +28,7 @@ class MonteCarlo(object):
         return self._done
 
 
-class Magnet(MonteCarlo):
+class MagnetSolver(MonteCarlo):
     """Ising model magnet Monte Carlo solver, base class for more specific models.
     Uses the Metropolis algorithm for accepting or rejecting a move.
     """
@@ -82,7 +82,7 @@ class Magnet(MonteCarlo):
         return mean, stdev
 
 
-class ParaMagnet(Magnet):
+class ParaMagnet(MagnetSolver):
     """Ising model paramagnet Monte Carlo solver, inherits from Magnet class."""
     def __init__(self, num_runs, magnetic_field, lattice_side):
         super().__init__(num_runs, lattice_side)
@@ -169,8 +169,8 @@ class SpinConfiguration(object):
                               + self._lattice[(i+1) % self._rows, j] \
                               + self._lattice[i, j-1] \
                               + self._lattice[i, (j+1) % self._columns]
-                exchange_energy += -coupling * self._lattice[i, j]*interaction
-        return exchange_energy
+                exchange_energy += self._lattice[i, j]*interaction
+        return -coupling*exchange_energy
 
     def flip_spin(self, row, column):
         """Flip a given spin in the lattice"""
@@ -234,7 +234,7 @@ class SpinConfigTest(unittest.TestCase):
         self.assertEqual(random_flipped[row, column], some_lattice[row, column]*-1)
 
     def test_paramagnet(self):
-        field = 0.5
+        field = 1
         mc_paramagnet = ParaMagnet(2000, field, 10)
         exact_magnetization = np.tanh(field)
         mc_paramagnet.simulate()
