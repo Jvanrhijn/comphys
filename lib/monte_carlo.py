@@ -46,6 +46,9 @@ class MagnetSolver(MonteCarlo):
         """Reset the Monte Carlo simulator state"""
         self.__init__(self._num_runs, self._lattice_side)
 
+    def set_lattice_side(self, new_side):
+        self._lattice_side = new_side
+
     def init_state(self):
         """Initialize the Monte Carlo simulator state"""
         return SpinConfiguration.init_random(self._lattice_side, self._lattice_side)
@@ -112,6 +115,9 @@ class ParaMagnet(MagnetSolver):
 
     def reset(self):
         self.__init__(self._num_runs, self._magnetic_field, self._lattice_side)
+
+    def set_magnetic_field(self, new_field):
+        self._magnetic_field = new_field
 
     def _energy_difference(self, flipped_row, flipped_column):
         return -2*self._magnetic_field*self.configuration[flipped_row, flipped_column]
@@ -265,6 +271,15 @@ class SpinConfigTest(unittest.TestCase):
         magnetization_second = mc_paramagnet.mean_magnetization(200)[0]
         self.assertAlmostEqual(magnetization_first, magnetization_second, places=1)
         self.assertNotEqual(magnetization_first, magnetization_second)
+
+    def test_set_functions(self):
+        field = 1
+        side = 10
+        mc_paramagnet = ParaMagnet(2000, field, side)
+        mc_paramagnet.set_magnetic_field(2)
+        mc_paramagnet.set_lattice_side(11)
+        self.assertEqual(11, mc_paramagnet._lattice_side)
+        self.assertEqual(2, mc_paramagnet._magnetic_field)
 
 
 if __name__ == '__main__':
