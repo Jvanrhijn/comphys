@@ -154,10 +154,8 @@ class SpinConfiguration(object):
 
     def energy(self, magnetic_field, coupling):
         """Returns the total energy of the lattice"""
-        magnetic_energy = -magnetic_field*self.magnetization()
-        exchange_energy = 0
-        if coupling != 0:
-            exchange_energy = self._exchange_energy(coupling)
+        magnetic_energy = 0 if magnetic_field == 0 else -magnetic_field*self.magnetization()
+        exchange_energy = 0 if coupling == 0 else self._exchange_energy(coupling)
         return magnetic_energy + exchange_energy
 
     def _exchange_energy(self, coupling):
@@ -237,10 +235,10 @@ class SpinConfigTest(unittest.TestCase):
 
     def test_paramagnet(self):
         field = 0.5
-        mc_paramagnet = ParaMagnet(20000, field, 10)
+        mc_paramagnet = ParaMagnet(2000, field, 10)
         exact_magnetization = np.tanh(field)
         mc_paramagnet.simulate()
-        mean_magnetization, stdev = mc_paramagnet.mean_magnetization(2000)
+        mean_magnetization, stdev = mc_paramagnet.mean_magnetization(200)
         # Test may fail in 5% of cases
         self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
 
