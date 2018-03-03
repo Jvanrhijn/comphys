@@ -27,6 +27,9 @@ class MonteCarlo(object):
     def is_done(self):
         return self._done
 
+    def reset(self):
+        self.__init__(self._num_runs)
+
 
 class MagnetSolver(MonteCarlo):
     """Ising model magnet Monte Carlo solver, base class for more specific models.
@@ -38,6 +41,10 @@ class MagnetSolver(MonteCarlo):
         self.energies = np.zeros(num_runs+1)
         self.magnetizations = np.zeros(num_runs+1)
         self.configuration = self.init_state()
+
+    def reset(self):
+        """Reset the Monte Carlo simulator state"""
+        self.__init__(self._num_runs, self._lattice_side)
 
     def init_state(self):
         """Initialize the Monte Carlo simulator state"""
@@ -55,11 +62,24 @@ class MagnetSolver(MonteCarlo):
 
     def _energy_difference(self, *args):
         """Calculate the energy difference between two consecutive iterations"""
-        pass
+        return 0
 
     def _magnetization_difference(self, *args):
         """Calculate the magnetization difference between two consecutive iterations"""
-        pass
+        return 0
+
+    def _iterate(self):
+        """Do one Monte Carlo iteration, and save energy and magnetization"""
+        row, column = self.configuration.flip_random()
+        energy_difference = self._energy_difference(row, column)
+        magnetization_difference = self._magnetization_difference(row, column)
+        if not self.move_accepted(energy_difference):
+            self.configuration.flip_spin(row, column)  # Restore old configuration
+            energy_difference = 0
+            magnetization_difference = 0
+        self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
+        self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
+            + magnetization_difference
 
     def simulate(self):
         """Run num_runs iterations and collect results"""
@@ -90,24 +110,14 @@ class ParaMagnet(MagnetSolver):
         self.energies[0] = self.configuration.energy(magnetic_field, 0)
         self.magnetizations[0] = self.configuration.magnetization()
 
+    def reset(self):
+        self.__init__(self._num_runs, self._magnetic_field, self._lattice_side)
+
     def _energy_difference(self, flipped_row, flipped_column):
         return -2*self._magnetic_field*self.configuration[flipped_row, flipped_column]
 
     def _magnetization_difference(self, flipped_row, flipped_column):
         return 2*self.configuration[flipped_row, flipped_column]
-
-    def _iterate(self):
-        """Do one Monte Carlo iteration, and save energy and magnetization"""
-        row, column = self.configuration.flip_random()
-        energy_difference = self._energy_difference(row, column)
-        magnetization_difference = self._magnetization_difference(row, column)
-        if not self.move_accepted(energy_difference):
-            self.configuration.flip_spin(row, column)  # Restore old configuration
-            energy_difference = 0
-            magnetization_difference = 0
-        self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
-        self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
-            + magnetization_difference
 
     def plot_state(self):
         """Plot the current state of the Monte Carlo simulation"""
@@ -122,7 +132,7 @@ class SpinConfiguration(object):
             self._rows = lattice.shape[0]
             self._columns = lattice.shape[1]
         else:
-            raise ValueError("All spins must be either up (1) or down (-1)")
+            raise ValueError("Spins must be either up (1) or down (-1)")
 
     @classmethod
     def all_up(cls, rows, columns):
@@ -241,6 +251,20 @@ class SpinConfigTest(unittest.TestCase):
         mean_magnetization, stdev = mc_paramagnet.mean_magnetization(200)
         # Test may fail in 5% of cases
         self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
+
+    def test_reset(self):
+        mc_paramagnet = ParaMagnet(2000, 1, 10)
+        mc_paramagnet.simulate()
+        magnetization_first = mc_paramagnet.mean_magnetization(200)[0]
+        mc_paramagnet.reset()
+        self.assertFalse(mc_paramagnet.is_done())
+        # If reset worked, energies & magnetizations should both be zero and equal
+        np.testing.assert_array_equal(mc_paramagnet.magnetizations[1:], mc_paramagnet.energies[1:])
+        # After second simulation, new magnetization should be close to but not equal to previous simulation
+        mc_paramagnet.simulate()
+        magnetization_second = mc_paramagnet.mean_magnetization(200)[0]
+        self.assertAlmostEqual(magnetization_first, magnetization_second, places=1)
+        self.assertNotEqual(magnetization_first, magnetization_second)
 
 
 if __name__ == '__main__':
