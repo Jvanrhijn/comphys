@@ -16,10 +16,6 @@ class MonteCarlo(object):
         """Initialize Monte Carlo simulator state"""
         pass
 
-    def _iterate(self):
-        """Do one Monte Carlo iteration"""
-        pass
-
     def plot_state(self, *args, **kwargs):
         """Plot the Monte Carlo simulator state"""
         pass
@@ -35,6 +31,11 @@ class MonteCarlo(object):
     def reset(self):
         """Reset the simulation"""
         self.__init__(self._num_runs)
+
+    """private"""
+    def _iterate(self):
+        """Do one Monte Carlo iteration"""
+        pass
 
 
 class MagnetSolver(MonteCarlo):
@@ -60,36 +61,6 @@ class MagnetSolver(MonteCarlo):
         """Initialize the Monte Carlo simulator state"""
         return SpinConfiguration.init_random(self._lattice_side, self._lattice_side)
 
-    @staticmethod
-    def move_accepted(energy_difference):
-        """Return whether to accept a move"""
-        if energy_difference <= 0:
-            return True
-        boltzmann_factor = np.exp(-energy_difference)
-        random = np.random.random()
-        return random < boltzmann_factor
-
-    def _energy_difference(self, flipped_row, flipped_column):
-        """Calculate the energy difference between two consecutive iterations"""
-        return 0
-
-    def _magnetization_difference(self, flipped_row, flipped_column):
-        """Calculate the magnetization difference between two consecutive iterations"""
-        return 0
-
-    def _iterate(self):
-        """Do one Monte Carlo iteration, and save energy and magnetization"""
-        row, column = self.configuration.flip_random()
-        energy_difference = self._energy_difference(row, column)
-        magnetization_difference = self._magnetization_difference(row, column)
-        if not self.move_accepted(energy_difference):
-            self.configuration.flip_spin(row, column)  # Restore old configuration
-            energy_difference = 0
-            magnetization_difference = 0
-        self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
-        self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
-            + magnetization_difference
-
     def simulate(self):
         """Run num_runs iterations and collect results"""
         assert not self._done
@@ -110,6 +81,41 @@ class MagnetSolver(MonteCarlo):
         mean = np.mean(self.magnetizations[equilibration_time:])/self._lattice_side**2
         stdev = np.std(self.magnetizations[equilibration_time:])/self._lattice_side**2
         return mean, stdev
+
+    def plot_state(self):
+        """Plot the current state of the Monte Carlo simulation"""
+        return self.configuration.plot_lattice()
+
+    @staticmethod
+    def move_accepted(energy_difference):
+        """Return whether to accept a move"""
+        if energy_difference <= 0:
+            return True
+        boltzmann_factor = np.exp(-energy_difference)
+        random = np.random.random()
+        return random < boltzmann_factor
+
+    """private"""
+    def _energy_difference(self, flipped_row, flipped_column):
+        """Calculate the energy difference between two consecutive iterations"""
+        return 0
+
+    def _magnetization_difference(self, flipped_row, flipped_column):
+        """Calculate the magnetization difference between two consecutive iterations"""
+        return 0
+
+    def _iterate(self):
+        """Do one Monte Carlo iteration, and save energy and magnetization"""
+        row, column = self.configuration.flip_random()
+        energy_difference = self._energy_difference(row, column)
+        magnetization_difference = self._magnetization_difference(row, column)
+        if not self.move_accepted(energy_difference):
+            self.configuration.flip_spin(row, column)  # Restore old configuration
+            energy_difference = 0
+            magnetization_difference = 0
+        self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
+        self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
+            + magnetization_difference
 
 
 class ParaMagnet(MagnetSolver):
@@ -132,10 +138,6 @@ class ParaMagnet(MagnetSolver):
 
     def _magnetization_difference(self, flipped_row, flipped_column):
         return 2*self.configuration[flipped_row, flipped_column]
-
-    def plot_state(self):
-        """Plot the current state of the Monte Carlo simulation"""
-        return self.configuration.plot_lattice()
 
 
 class SpinConfiguration(object):
@@ -182,20 +184,6 @@ class SpinConfiguration(object):
         exchange_energy = 0 if coupling == 0 else self._exchange_energy(coupling)
         return magnetic_energy + exchange_energy
 
-    def _exchange_energy(self, coupling):
-        """Return exchange energy of the lattice"""
-        exchange_energy = 0
-        for i in range(0, self._rows):
-            for j in range(0, self._columns):
-                # Interaction energy with periodic BC, don't need to modulo for negative indices since in Python
-                # list[-1] == list[len(list)-1].
-                interaction = self._lattice[i-1, j] \
-                              + self._lattice[(i+1) % self._rows, j] \
-                              + self._lattice[i, j-1] \
-                              + self._lattice[i, (j+1) % self._columns]
-                exchange_energy += self._lattice[i, j]*interaction
-        return -coupling*exchange_energy
-
     def flip_spin(self, row, column):
         """Flip a given spin in the lattice"""
         self._lattice[row, column] *= -1
@@ -213,3 +201,19 @@ class SpinConfiguration(object):
         ax.pcolormesh(self._lattice, cmap='Greys')
         plt.axis('equal')
         return fig, ax
+
+    """private"""
+    def _exchange_energy(self, coupling):
+        """Return exchange energy of the lattice"""
+        exchange_energy = 0
+        for i in range(0, self._rows):
+            for j in range(0, self._columns):
+                # Interaction energy with periodic BC, don't need to modulo for negative indices since in Python
+                # list[-1] == list[len(list)-1].
+                interaction = self._lattice[i-1, j] \
+                              + self._lattice[(i+1) % self._rows, j] \
+                              + self._lattice[i, j-1] \
+                              + self._lattice[i, (j+1) % self._columns]
+                exchange_energy += self._lattice[i, j]*interaction
+        return -coupling*exchange_energy
+
