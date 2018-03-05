@@ -74,19 +74,24 @@ class MagnetSolver(MonteCarlo):
         """Run num_runs iterations and collect results"""
         assert not self._done
         if self._unit_step:
+            # Buffers for magnetization and energy in each unit step
             magnetizations_buf = np.zeros(self._lattice_side**2 + 1)
             energies_buf = np.zeros(self._lattice_side**2 + 1)
             for self._unit_number in range(self._num_runs):
+                # Initialize first value of buffer to value of previous unit step
                 magnetizations_buf[0] = self.magnetizations[self._unit_number]
                 energies_buf[0] = self.energies[self._unit_number]
+                # Do the unit step
                 for self._iteration_number in range(self._lattice_side**2):
                     magnetization_difference, energy_difference = self._iterate()
                     magnetizations_buf[self._iteration_number+1] = magnetizations_buf[self._iteration_number] \
                         + magnetization_difference
                     energies_buf[self._iteration_number+1] = energies_buf[self._iteration_number] + energy_difference
+                # Save unit step results
                 self.magnetizations[self._unit_number+1] = magnetizations_buf[-1]
                 self.energies[self._unit_number+1] = energies_buf[-1]
         else:
+            # If not using unit steps, just do the iteration normally, saving values for each spin flip
             for self._iteration_number in range(self._num_runs):
                 magnetization_difference, energy_difference = self._iterate()
                 self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
@@ -95,18 +100,23 @@ class MagnetSolver(MonteCarlo):
         self._done = True
 
     def mean_energy(self):
-        """Get mean energy and standard deviation"""
+        """Get mean energy per site and standard deviation"""
         assert self._done
         mean = np.mean(self.energies[self._equilibration_time:])/self._lattice_side**2
         stdev = np.std(self.energies[self._equilibration_time:])/self._lattice_side**2
         return mean, stdev
 
     def mean_magnetization(self):
-        """Get mean magnetization and standard deviation"""
+        """Get mean magnetization per site and standard deviation"""
         assert self._done
         mean = np.mean(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
         stdev = np.std(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
         return mean, stdev
+
+    def susceptibility(self):
+        """Get magnetic susceptibility per site"""
+        return (np.mean(self.magnetizations[self._equilibration_time:]**2)
+                - np.mean(self.magnetizations[self._equilibration_time:])**2)/self._lattice_side**2
 
     def plot_results(self):
         """Plot the current state of the Monte Carlo simulation"""
