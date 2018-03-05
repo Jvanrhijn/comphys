@@ -115,12 +115,12 @@ class MagnetSolver(MonteCarlo):
 
     def susceptibility(self):
         """Get magnetic susceptibility per site"""
+        assert self._done
         return (np.mean(self.magnetizations[self._equilibration_time:]**2)
                 - np.mean(self.magnetizations[self._equilibration_time:])**2)/self._lattice_side**2
 
     def plot_results(self):
         """Plot the current state of the Monte Carlo simulation"""
-        assert self._done
         fig = plt.figure()
         grid_spec = GridSpec(2, 2)
         ax_magnetization = plt.subplot(grid_spec[0, 1])
@@ -133,15 +133,23 @@ class MagnetSolver(MonteCarlo):
         ax_energies.set_ylabel(r"$E(S)/N$")
         magnetization, m_stdev = self.mean_magnetization()
         energy, e_stdev = self.mean_energy()
-        ax_text.text(0, 0.8, r'$\langle m \rangle = {0} \pm {1}$'.format(round(magnetization, 3), round(m_stdev, 3)),
-                     fontsize=12)
-        ax_text.text(0, 0.4, r'$\langle E/N \rangle = {0} \pm {1}$'
-                     .format(round(energy, 3), round(e_stdev, 3)),
-                     fontsize=12)
+        text = r"""
+        $N = L^2 = {5}$
+        $\kappa = {6}$
+        $N_{{MC}} = {7}$
+        
+        $\langle m \rangle = {0} \pm {1}$
+        $\langle E/N \rangle = {2} \pm {3}$
+        $\chi = {4}$
+        """\
+            .format(round(magnetization, 3), round(m_stdev, 3), round(energy, 3), round(e_stdev, 3),
+                    round(self.susceptibility(), 3), self._lattice_side**2, self._equilibration_time, self._num_units)
+        ax_text.text(0, 0.3, text, fontsize=11)
         ax_text.axis('off')
         self.configuration.plot_lattice(ax_lattice)
         ax_magnetization.grid(True), ax_energies.grid(True)
         axes = [ax_lattice, ax_magnetization, ax_energies, ax_text]
+        grid_spec.tight_layout(fig, h_pad=0, w_pad=0)
         return fig, axes
 
     @staticmethod
