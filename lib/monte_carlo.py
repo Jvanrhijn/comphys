@@ -137,8 +137,9 @@ class MagnetSolver(MonteCarlo):
         magnetization, m_stdev = self.mean_magnetization()
         energy, e_stdev = self.mean_energy()
         text = r'$N = L^2 = {}$'.format(self._lattice_side**2) + "\n" +\
-            r'$\kappa = {}$'.format(self._equilibration_time) +\
+            r'$\kappa = {}$'.format(self._equilibration_time) + "\n" +\
             r'$N_{{MC}} = {}$'.format(self._num_units) + "\n" +\
+            r'------' + "\n" +\
             r'$\langle m \rangle = {0} \pm {1}$'.format(round(magnetization, 3), round(m_stdev, 3)) + "\n" +\
             r'$\langle E/N \rangle = {0} \pm {1}$'.format(round(energy, 3), round(e_stdev, 3)) + "\n" +\
             r'$\chi = {}$'.format(round(self.susceptibility(), 3))
