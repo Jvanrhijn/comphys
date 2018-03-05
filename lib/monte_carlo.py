@@ -2,9 +2,9 @@
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-import lib.util as util
 from matplotlib.gridspec import GridSpec
 from matplotlib import rc
+import lib.util as util
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 12})
 rc('text', usetex=True)
 
@@ -22,9 +22,10 @@ class MonteCarlo(object):
         pass
 
     def set_equilibration_time(self, equilibration_time):
+        """Set the equilibration time for the simulation"""
         self._equilibration_time = equilibration_time
 
-    def plot_results(self, *args, **kwargs):
+    def plot_results(self):
         """Plot the Monte Carlo simulator state"""
         pass
 
@@ -40,7 +41,7 @@ class MonteCarlo(object):
         """Reset the simulation"""
         self.__init__(self._num_runs)
 
-    """private"""
+    # Private
     def _iterate(self):
         """Do one Monte Carlo iteration"""
         pass
@@ -53,6 +54,7 @@ class MagnetSolver(MonteCarlo):
     def __init__(self, num_runs, lattice_side, unit_step=False):
         super().__init__(num_runs)
         self._num_units = num_runs
+        self._unit_number = 0
         self._lattice_side = lattice_side
         self._unit_step = unit_step
         self.energies = np.zeros(self._num_units+1)
@@ -146,7 +148,8 @@ class MagnetSolver(MonteCarlo):
         ax_text.text(0, 0.3, text, fontsize=11)
         ax_text.axis('off')
         self.configuration.plot_lattice(ax_lattice)
-        ax_magnetization.grid(True), ax_energies.grid(True)
+        ax_magnetization.grid(True)
+        ax_energies.grid(True)
         axes = [ax_lattice, ax_magnetization, ax_energies, ax_text]
         grid_spec.tight_layout(fig, h_pad=0, w_pad=0)
         return fig, axes
@@ -160,14 +163,14 @@ class MagnetSolver(MonteCarlo):
         random = np.random.random()
         return random < boltzmann_factor
 
-    """private"""
+    # Private
     def _energy_difference(self, flipped_row, flipped_column):
         """Calculate the energy difference between two consecutive iterations"""
-        return 0
+        pass
 
     def _magnetization_difference(self, flipped_row, flipped_column):
         """Calculate the magnetization difference between two consecutive iterations"""
-        return 0
+        pass
 
     def _iterate(self):
         """Do one Monte Carlo iteration, and save energy and magnetization"""
@@ -228,10 +231,10 @@ class SpinConfiguration(object):
         """Initialize a random spin configuration in the desired shape"""
         return cls(np.random.choice([1, -1], size=(rows, columns)))
 
-    def __setitem__(self, row, column, value):
+    def __setitem__(self, key, value):
         """Set a spin to a value"""
         assert(value in [-1, 1])
-        self._lattice[row, column] = value
+        self._lattice[key] = value
 
     def __getitem__(self, key):
         """Get the spin of site (row, column)"""
@@ -268,7 +271,7 @@ class SpinConfiguration(object):
         plt.colorbar(colormesh, ax=ax, ticks=[-1, 1])
         return ax
 
-    """private"""
+    # Private
     def _exchange_energy(self, coupling):
         """Return exchange energy of the lattice"""
         exchange_energy = 0
@@ -276,10 +279,9 @@ class SpinConfiguration(object):
             for j in range(0, self._columns):
                 # Interaction energy with periodic BC, don't need to modulo for negative indices since in Python
                 # list[-1] == list[len(list)-1].
-                interaction = self._lattice[i-1, j] \
-                              + self._lattice[(i+1) % self._rows, j] \
-                              + self._lattice[i, j-1] \
+                interaction = self._lattice[i-1, j]\
+                              + self._lattice[(i+1) % self._rows, j]\
+                              + self._lattice[i, j-1]\
                               + self._lattice[i, (j+1) % self._columns]
                 exchange_energy += self._lattice[i, j]*interaction
         return -coupling*exchange_energy
-
