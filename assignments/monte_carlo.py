@@ -35,7 +35,7 @@ def monte_carlo_1_5d():
 def monte_carlo_1_5e():
     lattice_sides = [5, 10, 15]
     num_runs = 2000
-    field = 1
+    field = 0.5
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, 0)
     mc_paramagnet.set_equilibration_time(200)
     fig, ax = plt.subplots(1, 3, sharey=True)
@@ -48,4 +48,14 @@ def monte_carlo_1_5e():
         mc_paramagnet.reset()
     plt.show()
 
+
+def monte_carlo_1_6b():
+    lattice_side = 10
+    num_runs = 2000
+    field = 0.5
+    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side, unit_step=True)
+    mc_paramagnet.set_equilibration_time(1)
+    mc_paramagnet.simulate()
+    mc_paramagnet.plot_results()
+    plt.show()
 
