@@ -9,7 +9,7 @@ rc('text', usetex=True)
 def monte_carlo_1_5a():
     lattice_side = 10
     field = 0.5
-    num_runs = 2000
+    num_runs = 200000
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side)
     mc_paramagnet.set_equilibration_time(200)
     fig, ax = plt.subplots(2, 2)
@@ -21,3 +21,31 @@ def monte_carlo_1_5a():
             ax[i, j].grid('on')
             mc_paramagnet.reset()
     plt.show()
+
+
+def monte_carlo_1_5d():
+    lattice_side, field, num_runs = 10, 0.5, 2000
+    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side)
+    mc_paramagnet.set_equilibration_time(200)
+    mc_paramagnet.simulate()
+    magnetization, m_stdev = mc_paramagnet.mean_magnetization()
+    print("m(S) = {m:.{dig_m}f} +/- {s:.{dig_s}f}".format(m=magnetization, dig_m=3, s=m_stdev, dig_s=3))
+
+
+def monte_carlo_1_5e():
+    lattice_sides = [5, 10, 15]
+    num_runs = 2000
+    field = 1
+    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, 0)
+    mc_paramagnet.set_equilibration_time(200)
+    fig, ax = plt.subplots(1, 3, sharey=True)
+    for n, lattice_side in enumerate(lattice_sides):
+        mc_paramagnet.set_lattice_side(lattice_side)
+        mc_paramagnet.simulate()
+        ax[n].plot(mc_paramagnet.magnetizations / lattice_side**2)
+        ax[n].grid('on')
+        ax[n].set_title(r'$L = %i$' % lattice_side)
+        mc_paramagnet.reset()
+    plt.show()
+
+

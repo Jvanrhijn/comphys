@@ -68,8 +68,7 @@ class MagnetSolver(MonteCarlo):
     def set_lattice_side(self, new_side):
         """Change the lattice side"""
         self._lattice_side = new_side
-        if self._unit_step:
-            self._num_runs = self._num_units*self._lattice_side**2
+        self.configuration = self.init_state()
 
     def init_state(self):
         """Initialize the Monte Carlo simulator state"""
