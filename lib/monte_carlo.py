@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import lib.util as util
+from matplotlib.gridspec import GridSpec
 
 
 class MonteCarlo(object):
@@ -10,13 +11,17 @@ class MonteCarlo(object):
     def __init__(self, num_runs):
         self._num_runs = num_runs
         self._iteration_number = 0
+        self._equilibration_time = 0
         self._done = False
 
     def init_state(self):
         """Initialize Monte Carlo simulator state"""
         pass
 
-    def plot_state(self, *args, **kwargs):
+    def set_equilibration_time(self, equilibration_time):
+        self._equilibration_time = equilibration_time
+
+    def plot_results(self, *args, **kwargs):
         """Plot the Monte Carlo simulator state"""
         pass
 
@@ -89,23 +94,45 @@ class MagnetSolver(MonteCarlo):
                 self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
         self._done = True
 
-    def mean_energy(self, equilibration_time):
+    def mean_energy(self):
         """Get mean energy and standard deviation"""
         assert self._done
-        mean = np.mean(self.energies[equilibration_time:])
-        stdev = np.std(self.energies[equilibration_time:])
+        mean = np.mean(self.energies[self._equilibration_time:])/self._lattice_side**2
+        stdev = np.std(self.energies[self._equilibration_time:])/self._lattice_side**2
         return mean, stdev
 
-    def mean_magnetization(self, equilibration_time):
+    def mean_magnetization(self):
         """Get mean magnetization and standard deviation"""
         assert self._done
-        mean = np.mean(self.magnetizations[equilibration_time:])/self._lattice_side**2
-        stdev = np.std(self.magnetizations[equilibration_time:])/self._lattice_side**2
+        mean = np.mean(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
+        stdev = np.std(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
         return mean, stdev
 
-    def plot_state(self):
+    def plot_results(self):
         """Plot the current state of the Monte Carlo simulation"""
-        return self.configuration.plot_lattice()
+        assert self._done
+        fig = plt.figure()
+        grid_spec = GridSpec(2, 2)
+        ax_magnetization = plt.subplot(grid_spec[0, 1])
+        ax_energies = plt.subplot(grid_spec[1, 1])
+        ax_lattice = plt.subplot(grid_spec[0, 0])
+        ax_text = plt.subplot(grid_spec[1, 0])
+        ax_magnetization.plot(self.magnetizations/self._lattice_side**2)
+        ax_magnetization.set_ylabel(r"$m(S)$")
+        ax_energies.plot(self.energies/self._lattice_side**2, 'g')
+        ax_energies.set_ylabel(r"$E(S)/N$")
+        magnetization, m_stdev = self.mean_magnetization()
+        energy, e_stdev = self.mean_energy()
+        ax_text.text(0, 0.8, r'$\langle m \rangle = {0} \pm {1}$'.format(round(magnetization, 3), round(m_stdev, 3)),
+                     fontsize=12)
+        ax_text.text(0, 0.4, r'$\langle E/N \rangle = {0} \pm {1}$'
+                     .format(round(energy, 3), round(e_stdev, 3)),
+                     fontsize=12)
+        ax_text.axis('off')
+        self.configuration.plot_lattice(ax_lattice)
+        ax_magnetization.grid(True), ax_energies.grid(True)
+        axes = [ax_lattice, ax_magnetization, ax_energies, ax_text]
+        return fig, axes
 
     @staticmethod
     def move_accepted(energy_difference):
@@ -214,12 +241,15 @@ class SpinConfiguration(object):
         self.flip_spin(row, column)
         return row, column
 
-    def plot_lattice(self):
+    def plot_lattice(self, ax):
         """Creates a simple matshow of the spin configuration"""
-        fig, ax = plt.subplots(1)
-        ax.pcolormesh(self._lattice, cmap='Greys')
-        plt.axis('equal')
-        return fig, ax
+        cmap = plt.cm.get_cmap('Greys', 2)
+        colormesh = ax.pcolormesh(self._lattice, cmap=cmap)
+        ax.axis('equal')
+        ax.axis('off')
+        ax.set_title('Lattice')
+        plt.colorbar(colormesh, ax=ax, ticks=[-1, 1])
+        return ax
 
     """private"""
     def _exchange_energy(self, coupling):
