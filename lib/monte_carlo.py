@@ -42,20 +42,24 @@ class MagnetSolver(MonteCarlo):
     """Ising model magnet Monte Carlo solver, base class for more specific models.
     Uses the Metropolis algorithm for accepting or rejecting a move.
     """
-    def __init__(self, num_runs, lattice_side):
+    def __init__(self, num_runs, lattice_side, unit_step=False):
         super().__init__(num_runs)
+        self._num_units = num_runs
         self._lattice_side = lattice_side
-        self.energies = np.zeros(num_runs+1)
-        self.magnetizations = np.zeros(num_runs+1)
+        self._unit_step = unit_step
+        self.energies = np.zeros(self._num_units+1)
+        self.magnetizations = np.zeros(self._num_units+1)
         self.configuration = self.init_state()
 
     def reset(self):
         """Reset the Monte Carlo simulator state"""
-        self.__init__(self._num_runs, self._lattice_side)
+        self.__init__(self._num_units, self._lattice_side)
 
     def set_lattice_side(self, new_side):
         """Change the lattice side"""
         self._lattice_side = new_side
+        if self._unit_step:
+            self._num_runs = self._num_units*self._lattice_side**2
 
     def init_state(self):
         """Initialize the Monte Carlo simulator state"""
@@ -64,8 +68,25 @@ class MagnetSolver(MonteCarlo):
     def simulate(self):
         """Run num_runs iterations and collect results"""
         assert not self._done
-        for self._iteration_number in range(self._num_runs):
-            self._iterate()
+        if self._unit_step:
+            magnetizations_buf = np.zeros(self._lattice_side**2 + 1)
+            energies_buf = np.zeros(self._lattice_side**2 + 1)
+            for self._unit_number in range(self._num_runs):
+                magnetizations_buf[0] = self.magnetizations[self._unit_number]
+                energies_buf[0] = self.energies[self._unit_number]
+                for self._iteration_number in range(self._lattice_side**2):
+                    magnetization_difference, energy_difference = self._iterate()
+                    magnetizations_buf[self._iteration_number+1] = magnetizations_buf[self._iteration_number] \
+                        + magnetization_difference
+                    energies_buf[self._iteration_number+1] = energies_buf[self._iteration_number] + energy_difference
+                self.magnetizations[self._unit_number+1] = magnetizations_buf[-1]
+                self.energies[self._unit_number+1] = energies_buf[-1]
+        else:
+            for self._iteration_number in range(self._num_runs):
+                magnetization_difference, energy_difference = self._iterate()
+                self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
+                    + magnetization_difference
+                self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
         self._done = True
 
     def mean_energy(self, equilibration_time):
@@ -113,15 +134,13 @@ class MagnetSolver(MonteCarlo):
             self.configuration.flip_spin(row, column)  # Restore old configuration
             energy_difference = 0
             magnetization_difference = 0
-        self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
-        self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
-            + magnetization_difference
+        return magnetization_difference, energy_difference
 
 
 class ParaMagnet(MagnetSolver):
     """Ising model paramagnet Monte Carlo solver, inherits from Magnet class."""
-    def __init__(self, num_runs, magnetic_field, lattice_side):
-        super().__init__(num_runs, lattice_side)
+    def __init__(self, num_runs, magnetic_field, lattice_side, unit_step=False):
+        super().__init__(num_runs, lattice_side, unit_step=unit_step)
         self._magnetic_field = magnetic_field
         self.energies[0] = self.configuration.energy(magnetic_field, 0)
         self.magnetizations[0] = self.configuration.magnetization()

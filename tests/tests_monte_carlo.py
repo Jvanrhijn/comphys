@@ -68,6 +68,7 @@ class ParaMagnetTest(unittest.TestCase):
         np.testing.assert_array_equal(mc_paramagnet.magnetizations[1:], mc_paramagnet.energies[1:])
         # After second simulation, new magnetization should be close to but not equal to previous simulation
         mc_paramagnet.simulate()
+        mc_paramagnet.plot_state()
         magnetization_second = mc_paramagnet.mean_magnetization(200)[0]
         self.assertAlmostEqual(magnetization_first, magnetization_second, places=1)
         self.assertNotEqual(magnetization_first, magnetization_second)
@@ -80,6 +81,17 @@ class ParaMagnetTest(unittest.TestCase):
         mc_paramagnet.set_lattice_side(11)
         self.assertEqual(11, mc_paramagnet._lattice_side)
         self.assertEqual(2, mc_paramagnet._magnetic_field)
+
+    def test_unit_steps(self):
+        field = 1
+        side = 10
+        num_units = 200
+        mc_paramagnet = ParaMagnet(num_units, field, side, unit_step=True)
+        mc_paramagnet.simulate()
+        exact_magnetization = np.tanh(field)
+        mean_magnetization, stdev = mc_paramagnet.mean_magnetization(2)
+        self.assertEqual(len(mc_paramagnet.magnetizations), num_units+1)
+        self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
 
 
 if __name__ == '__main__':
