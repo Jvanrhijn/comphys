@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import lib.util as util
 from matplotlib.gridspec import GridSpec
+from matplotlib import rc
+rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 12})
+rc('text', usetex=True)
 
 
 class MonteCarlo(object):
@@ -133,17 +136,12 @@ class MagnetSolver(MonteCarlo):
         ax_energies.set_ylabel(r"$E(S)/N$")
         magnetization, m_stdev = self.mean_magnetization()
         energy, e_stdev = self.mean_energy()
-        text = r"""
-        $N = L^2 = {5}$
-        $\kappa = {6}$
-        $N_{{MC}} = {7}$
-        
-        $\langle m \rangle = {0} \pm {1}$
-        $\langle E/N \rangle = {2} \pm {3}$
-        $\chi = {4}$
-        """\
-            .format(round(magnetization, 3), round(m_stdev, 3), round(energy, 3), round(e_stdev, 3),
-                    round(self.susceptibility(), 3), self._lattice_side**2, self._equilibration_time, self._num_units)
+        text = r'$N = L^2 = {}$'.format(self._lattice_side**2) + "\n" +\
+            r'$\kappa = {}$'.format(self._equilibration_time) +\
+            r'$N_{{MC}} = {}$'.format(self._num_units) + "\n" +\
+            r'$\langle m \rangle = {0} \pm {1}$'.format(round(magnetization, 3), round(m_stdev, 3)) + "\n" +\
+            r'$\langle E/N \rangle = {0} \pm {1}$'.format(round(energy, 3), round(e_stdev, 3)) + "\n" +\
+            r'$\chi = {}$'.format(round(self.susceptibility(), 3))
         ax_text.text(0, 0.3, text, fontsize=11)
         ax_text.axis('off')
         self.configuration.plot_lattice(ax_lattice)
