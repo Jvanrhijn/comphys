@@ -11,13 +11,13 @@ def monte_carlo_1_5a():
     field = 0.5
     num_runs = 2000
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side)
-    figures = []
-    axes = []
+    mc_paramagnet.set_equilibration_time(200)
+    fig, ax = plt.subplots(2, 2)
     # Run simulation four times, plot each
-    for n in range(0, 4):
-        mc_paramagnet.simulate()
-        mc_paramagnet.plot_results()
-        fig, ax = mc_paramagnet.plot_results()
-        fig.suptitle(r"Run #{}".format(n+1))
-        mc_paramagnet.reset()
+    for i in range(0, 2):
+        for j in range(0, 2):
+            mc_paramagnet.simulate()
+            ax[i, j].plot(mc_paramagnet.magnetizations)
+            ax[i, j].grid('on')
+            mc_paramagnet.reset()
     plt.show()

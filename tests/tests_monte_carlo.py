@@ -105,7 +105,6 @@ class ParaMagnetTest(unittest.TestCase):
         mc_paramagnet = ParaMagnet(num_units, field, side, unit_step=True)
         mc_paramagnet.simulate()
         mc_paramagnet.plot_results()
-        plt.show()
 
 
 if __name__ == '__main__':
