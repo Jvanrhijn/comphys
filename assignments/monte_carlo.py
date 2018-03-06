@@ -51,11 +51,31 @@ def monte_carlo_1_5e():
 
 def monte_carlo_1_6b():
     lattice_side = 10
-    num_runs = 2000
+    num_runs = 200
     field = 0.5
-    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side, unit_step=True)
-    mc_paramagnet.set_equilibration_time(1)
-    mc_paramagnet.simulate()
+    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side)
+    mc_paramagnet.set_equilibration_time(10)
+    mc_paramagnet.simulate_unit()
     mc_paramagnet.plot_results()
+    plt.show()
+
+
+def monte_carlo_1_7a():
+    field_strengths = np.linspace(-2, 2, 40)
+    num_runs = 200
+    lattice_side = 10
+    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, 0, lattice_side)
+    mc_paramagnet.set_equilibration_time(2)
+    magnetization_mean = []
+    for field in field_strengths:
+        mc_paramagnet.set_magnetic_field(field)
+        mc_paramagnet.reset()
+        mc_paramagnet.simulate_unit()
+        magnetization_mean.append(mc_paramagnet.mean_magnetization()[0])
+    fig, ax = plt.subplots(1)
+    ax.plot(field_strengths, magnetization_mean, '.')
+    ax.grid('on')
+    ax.set_xlabel(r'$B$'), ax.set_ylabel(r'$\langle m \rangle$')
+    ax.plot(field_strengths, np.tanh(field_strengths))
     plt.show()
 

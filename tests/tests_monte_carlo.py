@@ -91,8 +91,8 @@ class ParaMagnetTest(unittest.TestCase):
         field = 1
         side = 10
         num_units = 20
-        mc_paramagnet = ParaMagnet(num_units, field, side, unit_step=True)
-        mc_paramagnet.simulate()
+        mc_paramagnet = ParaMagnet(num_units, field, side)
+        mc_paramagnet.simulate_unit()
         exact_magnetization = np.tanh(field)
         mc_paramagnet.set_equilibration_time(2)
         mean_magnetization, stdev = mc_paramagnet.mean_magnetization()
@@ -102,8 +102,8 @@ class ParaMagnetTest(unittest.TestCase):
     def test_mc_plot(self):
         field, side = 0.5, 10
         num_units = 100
-        mc_paramagnet = ParaMagnet(num_units, field, side, unit_step=True)
-        mc_paramagnet.simulate()
+        mc_paramagnet = ParaMagnet(num_units, field, side)
+        mc_paramagnet.simulate_unit()
         mc_paramagnet.plot_results()
 
 
