@@ -53,16 +53,15 @@ class MagnetSolver(MonteCarlo):
     """
     def __init__(self, num_runs, lattice_side):
         super().__init__(num_runs)
-        self._num_units = num_runs
         self._unit_number = 0
         self._lattice_side = lattice_side
-        self.energies = np.zeros(self._num_units+1)
-        self.magnetizations = np.zeros(self._num_units+1)
+        self.energies = np.zeros(self._num_runs+1)
+        self.magnetizations = np.zeros(self._num_runs+1)
         self.configuration = self.init_state()
 
     def reset(self):
         """Reset the Monte Carlo simulator state"""
-        self.__init__(self._num_units, self._lattice_side)
+        self.__init__(self._num_runs, self._lattice_side)
 
     def set_lattice_side(self, new_side):
         """Change the lattice side"""
@@ -108,15 +107,15 @@ class MagnetSolver(MonteCarlo):
         """Get mean energy per site and standard deviation"""
         assert self._done
         mean = np.mean(self.energies[self._equilibration_time:])/self._lattice_side**2
-        stdev = np.std(self.energies[self._equilibration_time:])/self._lattice_side**2
-        return mean, stdev
+        error = np.std(self.energies[self._equilibration_time:])/self._lattice_side**2/np.sqrt(self._num_runs-1)
+        return mean, error
 
     def mean_magnetization(self):
         """Get mean magnetization per site and standard deviation"""
         assert self._done
         mean = np.mean(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
-        stdev = np.std(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
-        return mean, stdev
+        error = np.std(self.magnetizations[self._equilibration_time:])/self._lattice_side**2/(np.sqrt(self._num_runs-1))
+        return mean, error
 
     def susceptibility(self):
         """Get magnetic susceptibility per site"""
@@ -140,7 +139,7 @@ class MagnetSolver(MonteCarlo):
         energy, e_stdev = self.mean_energy()
         text = r'$N = L^2 = {}$'.format(self._lattice_side**2) + "\n" +\
             r'$\kappa = {}$'.format(self._equilibration_time) + "\n" +\
-            r'$N_{{MC}} = {}$'.format(self._num_units) + "\n" +\
+            r'$N_{{MC}} = {}$'.format(self._num_runs) + "\n" +\
             r'------' + "\n" +\
             r'$\langle m \rangle = {0} \pm {1}$'.format(round(magnetization, 3), round(m_stdev, 3)) + "\n" +\
             r'$\langle E/N \rangle = {0} \pm {1}$'.format(round(energy, 3), round(e_stdev, 3)) + "\n" +\
@@ -170,7 +169,7 @@ class MagnetSolver(MonteCarlo):
 
     def _magnetization_difference(self, flipped_row, flipped_column):
         """Calculate the magnetization difference between two consecutive iterations"""
-        pass
+        return 2*self.configuration[flipped_row, flipped_column]
 
     def _iterate(self):
         """Do one Monte Carlo iteration, and save energy and magnetization"""
@@ -186,7 +185,7 @@ class MagnetSolver(MonteCarlo):
 
 class ParaMagnet(MagnetSolver):
     """Ising model paramagnet Monte Carlo solver, inherits from Magnet class."""
-    def __init__(self, num_runs, magnetic_field, lattice_side, unit_step=False):
+    def __init__(self, num_runs, magnetic_field, lattice_side):
         super().__init__(num_runs, lattice_side)
         self._magnetic_field = magnetic_field
         self.energies[0] = self.configuration.energy(magnetic_field, 0)
@@ -202,8 +201,32 @@ class ParaMagnet(MagnetSolver):
     def _energy_difference(self, flipped_row, flipped_column):
         return -2*self._magnetic_field*self.configuration[flipped_row, flipped_column]
 
-    def _magnetization_difference(self, flipped_row, flipped_column):
-        return 2*self.configuration[flipped_row, flipped_column]
+
+class FerroMagnet(MagnetSolver):
+    """Ising model ferromagnet solver, inherits from magnet class"""
+    def __init__(self, num_runs, magnetic_field, coupling, lattice_side):
+        super().__init__(num_runs, lattice_side)
+        self._magnetic_field = magnetic_field
+        self._coupling = coupling
+        self.energies[0] = self.configuration.energy(magnetic_field, coupling)
+        self.magnetizations[0] = self.configuration.magnetization()
+
+    def reset(self):
+        self.__init__(self._num_runs, self._magnetic_field, self._lattice)
+
+    def set_coupling(self, new_coupling):
+        """Accessor method for ferromagnetic coupling"""
+        self._coupling = new_coupling
+
+    def _energy_difference(self, flipped_row, flipped_column):
+        flipped_spin = self.configuration[flipped_row, flipped_column]
+        magnetic_energy_difference = -2*self._magnetic_field*flipped_spin
+        exchange_energy_difference = -4*self._coupling*flipped_spin*(
+            self.configuration[flipped_row-1, flipped_column]
+            + self.configuration[(flipped_row+1) % self._lattice_side, flipped_column]
+            + self.configuration[flipped_row, flipped_column-1]
+            + self.configuration[flipped_row, (flipped_column + 1) % self._lattice_side])
+        return magnetic_energy_difference + exchange_energy_difference
 
 
 class SpinConfiguration(object):
@@ -266,7 +289,15 @@ class SpinConfiguration(object):
         cmap = plt.cm.get_cmap('Greys', 2)
         colormesh = ax.pcolormesh(self._lattice, cmap=cmap)
         ax.axis('equal')
-        ax.axis('off')
+        ax.tick_params(
+            which='both',
+            bottom='off',
+            top='off',
+            left='off',
+            right='off',
+            labelbottom='off',
+            labelleft='off'
+        )
         ax.set_title('Lattice')
         plt.colorbar(colormesh, ax=ax, ticks=[-1, 1])
         return ax

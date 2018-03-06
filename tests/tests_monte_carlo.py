@@ -53,7 +53,8 @@ class ParaMagnetTest(unittest.TestCase):
         mc_paramagnet.set_equilibration_time(200)
         exact_magnetization = np.tanh(field)
         mc_paramagnet.simulate()
-        mean_magnetization, stdev = mc_paramagnet.mean_magnetization()
+        mean_magnetization, error = mc_paramagnet.mean_magnetization()
+        stdev = error*np.sqrt(1999)
         # Test may fail in 5% of cases
         self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
         with self.assertRaises(AssertionError):
@@ -71,7 +72,6 @@ class ParaMagnetTest(unittest.TestCase):
         # After second simulation, new magnetization should be close to but not equal to previous simulation
         mc_paramagnet.simulate()
         mc_paramagnet.set_equilibration_time(200)
-        mc_paramagnet.plot_results()
         magnetization_second = mc_paramagnet.mean_magnetization()[0]
         self.assertAlmostEqual(magnetization_first, magnetization_second, places=1)
         self.assertNotEqual(magnetization_first, magnetization_second)
@@ -99,12 +99,16 @@ class ParaMagnetTest(unittest.TestCase):
         self.assertEqual(len(mc_paramagnet.magnetizations), num_units+1)
         self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
 
-    def test_mc_plot(self):
-        field, side = 0.5, 10
-        num_units = 100
-        mc_paramagnet = ParaMagnet(num_units, field, side)
-        mc_paramagnet.simulate_unit()
-        mc_paramagnet.plot_results()
+
+class TestFerroMagnet(unittest.TestCase):
+    """Tests for FerroMagnet class"""
+    def test_ferromagnet(self):
+        num_runs, field, coupling, lattice_side = 1000, 0, 0.35, 10
+        mc_ferromagnet = FerroMagnet(num_runs, field, coupling, lattice_side)
+        mc_ferromagnet.set_equilibration_time(num_runs//10)
+        mc_ferromagnet.simulate_unit()
+        mc_ferromagnet.plot_results()
+        plt.show()
 
 
 if __name__ == '__main__':
