@@ -50,7 +50,7 @@ class ParaMagnetTest(unittest.TestCase):
     def test_paramagnet(self):
         field = 1
         mc_paramagnet = ParaMagnet(2000, field, 10)
-        mc_paramagnet.set_equilibration_time(200)
+        mc_paramagnet.equilibration_time = 200
         exact_magnetization = np.tanh(field)
         mc_paramagnet.simulate()
         mean_magnetization, error = mc_paramagnet.mean_magnetization()
@@ -62,7 +62,7 @@ class ParaMagnetTest(unittest.TestCase):
 
     def test_reset(self):
         mc_paramagnet = ParaMagnet(2000, 1, 10)
-        mc_paramagnet.set_equilibration_time(200)
+        mc_paramagnet.equilibration_time = 200
         mc_paramagnet.simulate()
         magnetization_first = mc_paramagnet.mean_magnetization()[0]
         mc_paramagnet.reset()
@@ -71,7 +71,7 @@ class ParaMagnetTest(unittest.TestCase):
         np.testing.assert_array_equal(mc_paramagnet.magnetizations[1:], mc_paramagnet.energies[1:])
         # After second simulation, new magnetization should be close to but not equal to previous simulation
         mc_paramagnet.simulate()
-        mc_paramagnet.set_equilibration_time(200)
+        mc_paramagnet.equilibration_time = 200
         magnetization_second = mc_paramagnet.mean_magnetization()[0]
         self.assertAlmostEqual(magnetization_first, magnetization_second, places=1)
         self.assertNotEqual(magnetization_first, magnetization_second)
@@ -80,9 +80,9 @@ class ParaMagnetTest(unittest.TestCase):
         field = 1
         side = 10
         mc_paramagnet = ParaMagnet(2000, field, side)
-        mc_paramagnet.set_magnetic_field(2)
-        mc_paramagnet.set_lattice_side(11)
-        mc_paramagnet.set_equilibration_time(10)
+        mc_paramagnet.magnetic_field = 2
+        mc_paramagnet.lattice_side = 11
+        mc_paramagnet.equilibration_time = 10
         self.assertEqual(11, mc_paramagnet._lattice_side)
         self.assertEqual(2, mc_paramagnet._magnetic_field)
         self.assertEqual(10, mc_paramagnet._equilibration_time)
@@ -94,7 +94,7 @@ class ParaMagnetTest(unittest.TestCase):
         mc_paramagnet = ParaMagnet(num_units, field, side)
         mc_paramagnet.simulate_unit()
         exact_magnetization = np.tanh(field)
-        mc_paramagnet.set_equilibration_time(2)
+        mc_paramagnet.equilibration_time = 2
         mean_magnetization, stdev = mc_paramagnet.mean_magnetization()
         self.assertEqual(len(mc_paramagnet.magnetizations), num_units+1)
         self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
@@ -105,10 +105,9 @@ class TestFerroMagnet(unittest.TestCase):
     def test_ferromagnet(self):
         num_runs, field, coupling, lattice_side = 1000, 0, 0.5, 10
         mc_ferromagnet = FerroMagnet(num_runs, field, coupling, lattice_side)
-        mc_ferromagnet.set_equilibration_time(num_runs//10)
+        mc_ferromagnet.equilibration_time = num_runs//10
         mc_ferromagnet.simulate_unit()
-        mc_ferromagnet.plot_results()
-        plt.show()
+        self.assertAlmostEqual(mc_ferromagnet.configuration.energy(field, coupling), mc_ferromagnet.energies[-1])
 
 
 if __name__ == '__main__':

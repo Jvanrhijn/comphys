@@ -11,7 +11,7 @@ def monte_carlo_1_5a():
     field = 0.5
     num_runs = 2000
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side)
-    mc_paramagnet.set_equilibration_time(200)
+    mc_paramagnet.equilibration_time = 200
     fig, ax = plt.subplots(2, 2)
     # Run simulation four times, plot each
     for i in range(0, 2):
@@ -26,7 +26,7 @@ def monte_carlo_1_5a():
 def monte_carlo_1_5d():
     lattice_side, field, num_runs = 10, 0.5, 5000
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side)
-    mc_paramagnet.set_equilibration_time(200)
+    mc_paramagnet.equilibration_time = 200
     mc_paramagnet.simulate()
     magnetization, m_stdev = mc_paramagnet.mean_magnetization()
     print("m(S) = {m:.{dig_m}f} +/- {s:.{dig_s}f}".format(m=magnetization, dig_m=3, s=m_stdev, dig_s=3))
@@ -37,11 +37,10 @@ def monte_carlo_1_5e():
     num_runs = 5000
     field = 0.5
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, 0)
-    mc_paramagnet.set_equilibration_time(500)
+    mc_paramagnet.equilibration_time = 500
     fig, ax = plt.subplots(1, len(lattice_sides), sharey=True)
     for n, lattice_side in enumerate(lattice_sides):
-        mc_paramagnet.set_lattice_side(lattice_side)
-        mc_paramagnet.reset()
+        mc_paramagnet.lattice_side = lattice_side
         mc_paramagnet.simulate()
         ax[n].plot(mc_paramagnet.magnetizations / lattice_side**2)
         ax[n].grid('on')
@@ -54,7 +53,7 @@ def monte_carlo_1_6b():
     num_runs = 50
     field = 0.5
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, lattice_side)
-    mc_paramagnet.set_equilibration_time(10)
+    mc_paramagnet.equilibration_time = 10
     mc_paramagnet.simulate_unit()
     mc_paramagnet.plot_results()
     plt.show()
@@ -65,12 +64,11 @@ def monte_carlo_1_7():
     num_runs = 100
     lattice_side = 10
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, 0, lattice_side)
-    mc_paramagnet.set_equilibration_time(5)
+    mc_paramagnet.equilibration_time = 5
     magnetization_mean = []
     magnetization_stdev = []
     for field in field_strengths:
-        mc_paramagnet.set_magnetic_field(field)
-        mc_paramagnet.reset()
+        mc_paramagnet.magnetic_field = field
         mc_paramagnet.simulate_unit()
         m_mean, m_stdev = mc_paramagnet.mean_magnetization()
         magnetization_mean.append(m_mean)
@@ -91,11 +89,10 @@ def monte_carlo_1_8a():
     lattice_side = 10
     exact_susceptibility = 1/np.cosh(field_strengths)**2
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, 0, lattice_side)
-    mc_paramagnet.set_equilibration_time(5)
+    mc_paramagnet.equilibration_time = 5
     susceptibility = []
     for field in field_strengths:
-        mc_paramagnet.set_magnetic_field(field)
-        mc_paramagnet.reset()
+        mc_paramagnet.magnetic_field = field
         mc_paramagnet.simulate_unit()
         susceptibility.append(mc_paramagnet.susceptibility())
     fig, ax = plt.subplots(1)
@@ -117,12 +114,10 @@ def monte_carlo_1_8b():
     susceptibility_list = []
 
     def susceptibility_finite_difference(shift, mc_solver: monte_carlo.ParaMagnet):
-        mc_solver.set_magnetic_field(field + shift/2)
-        mc_solver.reset()
+        mc_solver.magnetic_field = field + shift/2
         mc_solver.simulate_unit()
         magnetization_upper = mc_solver.mean_magnetization()[0]
-        mc_solver.set_magnetic_field(field - shift/2)
-        mc_solver.reset()
+        mc_solver.magnetic_field = field - shift/2
         mc_solver.simulate_unit()
         magnetization_lower = mc_solver.mean_magnetization()[0]
         return (magnetization_upper - magnetization_lower)/shift
@@ -142,27 +137,58 @@ def monte_carlo_1_8b():
 
 
 def monte_carlo_2_3a():
-    pass
+    field, lattice_side, coupling, num_runs = 0, 10, 1, 200
+    # i, ii
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, coupling, lattice_side)
+    mc_ferromagnet.equilibration_time = 20
+    mc_ferromagnet.simulate_unit()
+    fig_no_field = mc_ferromagnet.plot_results()[0]
+    fig_no_field.suptitle(r"$B = 0$")
+    # iii
+    mc_ferromagnet.magnetic_field = 0.05
+    mc_ferromagnet.simulate_unit()
+    fig_weak_field = mc_ferromagnet.plot_results()[0]
+    fig_weak_field.suptitle(r"$B = 0.05$")
+    mc_ferromagnet.magnetic_field = 1
+    mc_ferromagnet.simulate_unit()
+    fig_strong_field = mc_ferromagnet.plot_results()[0]
+    fig_strong_field.suptitle(r"$B = 1$")
+    plt.show()
 
 
-def monte_carlo_2_4a():
+def monte_carlo_2_3b():
+    field, lattice_side, num_runs, coupling = 0, 10, 200, 0.2
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, coupling, lattice_side)
+    mc_ferromagnet.equilibration_time = 20
+    mc_ferromagnet.simulate_unit()
+    mc_ferromagnet.plot_results()
+    plt.show()
+
+
+def monte_carlo_2_4ab():
     num_runs = 1000
     lattice_side = 10
     couplings = np.linspace(0, 1, 20)
     mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
-    fig, ax = plt.subplots(1)
-    ax.set_xlabel(r"$J$")
-    ax.set_ylabel(r"$m$")
-    ax.grid("on")
+    fig, ax = plt.subplots(1, 2)
+    for axis in ax:
+        axis.set_xlabel(r"$J$")
+        axis.grid("on")
+    ax[0].set_ylabel(r"$m$")
+    ax[1].set_ylabel(r"$\chi$")
 
     for coupling in couplings:
         magnetizations = []
-        mc_ferromagnet.set_coupling(coupling)
+        susceptibilities = []
+        mc_ferromagnet.coupling = coupling
         for _ in range(5):
-            mc_ferromagnet.reset()
             mc_ferromagnet.simulate_unit()
             magnetization = mc_ferromagnet.mean_magnetization()[0]
+            susceptibility = mc_ferromagnet.susceptibility()
             magnetizations.append(magnetization)
-        ax.plot(np.ones(len(magnetizations))*coupling, magnetizations, 'o', color='#1f77b4')
+            susceptibilities.append(susceptibility)
+        ax[0].plot(np.ones(len(magnetizations))*coupling, magnetizations, '.', color='#1f77b4')
+        ax[1].plot(np.ones(len(susceptibilities))*coupling, susceptibilities, '.', color='#ff7f0e')
 
     plt.show()
+

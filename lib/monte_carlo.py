@@ -21,9 +21,24 @@ class MonteCarlo(object):
         """Initialize Monte Carlo simulator state"""
         pass
 
-    def set_equilibration_time(self, equilibration_time):
+    @property
+    def equilibration_time(self):
+        return self._equilibration_time
+
+    @equilibration_time.setter
+    def equilibration_time(self, equilibration_time):
         """Set the equilibration time for the simulation"""
         self._equilibration_time = equilibration_time
+
+    @property
+    def num_runs(self):
+        return self._num_runs
+
+    @num_runs.setter
+    def num_runs(self, new_num_runs):
+        """Accessor method for setting the number of runs"""
+        self._num_runs = new_num_runs
+        self.reset()
 
     def plot_results(self):
         """Plot the Monte Carlo simulator state"""
@@ -63,10 +78,15 @@ class MagnetSolver(MonteCarlo):
         """Reset the Monte Carlo simulator state"""
         self.__init__(self._num_runs, self._lattice_side)
 
-    def set_lattice_side(self, new_side):
+    @property
+    def lattice_side(self):
+        return self._lattice_side
+
+    @lattice_side.setter
+    def lattice_side(self, new_side):
         """Change the lattice side"""
         self._lattice_side = new_side
-        self.configuration = self.init_state()
+        self.reset()
 
     def init_state(self):
         """Initialize the Monte Carlo simulator state"""
@@ -141,9 +161,9 @@ class MagnetSolver(MonteCarlo):
             r'$\kappa = {}$'.format(self._equilibration_time) + "\n" +\
             r'$N_{{MC}} = {}$'.format(self._num_runs) + "\n" +\
             r'------' + "\n" +\
-            r'$\langle m \rangle = {0} \pm {1}$'.format(round(magnetization, 3), round(m_stdev, 3)) + "\n" +\
-            r'$\langle E/N \rangle = {0} \pm {1}$'.format(round(energy, 3), round(e_stdev, 3)) + "\n" +\
-            r'$\chi = {}$'.format(round(self.susceptibility(), 3))
+            r'$\langle m \rangle = {0} \pm {1}$'.format(round(magnetization, 4), round(m_stdev, 4)) + "\n" +\
+            r'$\langle E/N \rangle = {0} \pm {1}$'.format(round(energy, 4), round(e_stdev, 4)) + "\n" +\
+            r'$\chi = {}$'.format(round(self.susceptibility(), 4))
         ax_text.text(0, 0.3, text, fontsize=11)
         ax_text.axis('off')
         self.configuration.plot_lattice(ax_lattice)
@@ -194,9 +214,15 @@ class ParaMagnet(MagnetSolver):
     def reset(self):
         self.__init__(self._num_runs, self._magnetic_field, self._lattice_side)
 
-    def set_magnetic_field(self, new_field):
+    @property
+    def magnetic_field(self):
+        return self._magnetic_field
+
+    @magnetic_field.setter
+    def magnetic_field(self, new_field):
         """Change the magnetic field"""
         self._magnetic_field = new_field
+        self.reset()
 
     def _energy_difference(self, flipped_row, flipped_column):
         return -2*self._magnetic_field*self.configuration[flipped_row, flipped_column]
@@ -214,9 +240,25 @@ class FerroMagnet(MagnetSolver):
     def reset(self):
         self.__init__(self._num_runs, self._magnetic_field, self._coupling, self._lattice_side)
 
-    def set_coupling(self, new_coupling):
+    @property
+    def coupling(self):
+        return self._coupling
+
+    @coupling.setter
+    def coupling(self, new_coupling):
         """Accessor method for ferromagnetic coupling"""
         self._coupling = new_coupling
+        self.reset()
+
+    @property
+    def magnetic_field(self):
+        return self._magnetic_field
+
+    @magnetic_field.setter
+    def magnetic_field(self, new_field):
+        """Accessor method for magnetic field"""
+        self._magnetic_field = new_field
+        self.reset()
 
     def _energy_difference(self, flipped_row, flipped_column):
         flipped_spin = self.configuration[flipped_row, flipped_column]
