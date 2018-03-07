@@ -212,7 +212,7 @@ class FerroMagnet(MagnetSolver):
         self.magnetizations[0] = self.configuration.magnetization()
 
     def reset(self):
-        self.__init__(self._num_runs, self._magnetic_field, self._lattice)
+        self.__init__(self._num_runs, self._magnetic_field, self._coupling, self._lattice_side)
 
     def set_coupling(self, new_coupling):
         """Accessor method for ferromagnetic coupling"""
@@ -221,7 +221,7 @@ class FerroMagnet(MagnetSolver):
     def _energy_difference(self, flipped_row, flipped_column):
         flipped_spin = self.configuration[flipped_row, flipped_column]
         magnetic_energy_difference = -2*self._magnetic_field*flipped_spin
-        exchange_energy_difference = -4*self._coupling*flipped_spin*(
+        exchange_energy_difference = -2*self._coupling*flipped_spin*(
             self.configuration[flipped_row-1, flipped_column]
             + self.configuration[(flipped_row+1) % self._lattice_side, flipped_column]
             + self.configuration[flipped_row, flipped_column-1]
@@ -315,4 +315,4 @@ class SpinConfiguration(object):
                               + self._lattice[i, j-1]\
                               + self._lattice[i, (j+1) % self._columns]
                 exchange_energy += self._lattice[i, j]*interaction
-        return -coupling*exchange_energy
+        return -0.5*coupling*exchange_energy

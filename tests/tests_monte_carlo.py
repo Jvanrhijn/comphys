@@ -103,7 +103,7 @@ class ParaMagnetTest(unittest.TestCase):
 class TestFerroMagnet(unittest.TestCase):
     """Tests for FerroMagnet class"""
     def test_ferromagnet(self):
-        num_runs, field, coupling, lattice_side = 1000, 0, 0.35, 10
+        num_runs, field, coupling, lattice_side = 1000, 0, 0.5, 10
         mc_ferromagnet = FerroMagnet(num_runs, field, coupling, lattice_side)
         mc_ferromagnet.set_equilibration_time(num_runs//10)
         mc_ferromagnet.simulate_unit()

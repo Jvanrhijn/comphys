@@ -143,3 +143,26 @@ def monte_carlo_1_8b():
 
 def monte_carlo_2_3a():
     pass
+
+
+def monte_carlo_2_4a():
+    num_runs = 1000
+    lattice_side = 10
+    couplings = np.linspace(0, 1, 20)
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
+    fig, ax = plt.subplots(1)
+    ax.set_xlabel(r"$J$")
+    ax.set_ylabel(r"$m$")
+    ax.grid("on")
+
+    for coupling in couplings:
+        magnetizations = []
+        mc_ferromagnet.set_coupling(coupling)
+        for _ in range(5):
+            mc_ferromagnet.reset()
+            mc_ferromagnet.simulate_unit()
+            magnetization = mc_ferromagnet.mean_magnetization()[0]
+            magnetizations.append(magnetization)
+        ax.plot(np.ones(len(magnetizations))*coupling, magnetizations, 'o', color='#1f77b4')
+
+    plt.show()
