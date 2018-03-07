@@ -137,11 +137,15 @@ class MagnetSolver(MonteCarlo):
         error = np.std(self.magnetizations[self._equilibration_time:])/self._lattice_side**2/(np.sqrt(self._num_runs-1))
         return mean, error
 
-    def susceptibility(self):
+    def susceptibility(self, absolute=False):
         """Get magnetic susceptibility per site"""
         assert self._done
-        return (np.mean(self.magnetizations[self._equilibration_time:]**2)
-                - np.mean(self.magnetizations[self._equilibration_time:])**2)/self._lattice_side**2
+        if not absolute:
+            return (np.mean(self.magnetizations[self._equilibration_time:]**2)
+                    - np.mean(self.magnetizations[self._equilibration_time:])**2)/self._lattice_side**2
+        else:
+            return (np.mean(abs(self.magnetizations[self._equilibration_time:])**2)
+                    - np.mean(abs(self.magnetizations[self._equilibration_time:]))**2)/self._lattice_side**2
 
     def plot_results(self):
         """Plot the current state of the Monte Carlo simulation"""
