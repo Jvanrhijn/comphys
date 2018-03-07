@@ -2,6 +2,7 @@
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
+from progressbar import ProgressBar
 from matplotlib.gridspec import GridSpec
 from matplotlib import rc
 import lib.util as util
@@ -97,7 +98,8 @@ class MagnetSolver(MonteCarlo):
         # Buffers for magnetization and energy in each unit step
         magnetizations_buf = np.zeros(self._lattice_side**2 + 1)
         energies_buf = np.zeros(self._lattice_side**2 + 1)
-        for self._unit_number in range(self._num_runs):
+        pbar = ProgressBar()
+        for self._unit_number in pbar(range(self._num_runs)):
             # Initialize first value of buffer to value of previous unit step
             magnetizations_buf[0] = self.magnetizations[self._unit_number]
             energies_buf[0] = self.energies[self._unit_number]
@@ -116,7 +118,8 @@ class MagnetSolver(MonteCarlo):
         """Run num_runs iterations and collect results"""
         assert not self._done
         # If not using unit steps, just do the iteration normally, saving values for each spin flip
-        for self._iteration_number in range(self._num_runs):
+        pbar = ProgressBar()
+        for self._iteration_number in pbar(range(self._num_runs)):
             magnetization_difference, energy_difference = self._iterate()
             self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
                                                             + magnetization_difference

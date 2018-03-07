@@ -182,6 +182,7 @@ def monte_carlo_2_4ab():
         susceptibilities = []
         mc_ferromagnet.coupling = coupling
         for _ in range(5):
+            mc_ferromagnet.reset()
             mc_ferromagnet.simulate_unit()
             magnetization = mc_ferromagnet.mean_magnetization()[0]
             susceptibility = mc_ferromagnet.susceptibility()
@@ -190,5 +191,65 @@ def monte_carlo_2_4ab():
         ax[0].plot(np.ones(len(magnetizations))*coupling, magnetizations, '.', color='#1f77b4')
         ax[1].plot(np.ones(len(susceptibilities))*coupling, susceptibilities, '.', color='#ff7f0e')
 
+    magnetizations_mf = np.linspace(min(magnetizations), max(magnetizations), 1000)
+    couplings_mf = lambda m: np.log((1+m)/(1-m))/(8*m)
+
+    ax[0].plot(couplings_mf(magnetizations_mf), magnetizations_mf, label='Exact')
+    ax[0].legend()
     plt.show()
 
+
+def monte_carlo_2_4e():
+    num_runs = 1000
+    lattice_side = 10
+    couplings = np.linspace(0, 1, 20)
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
+    fig, ax = plt.subplots(1)
+    ax.set_xlabel(r"$J$")
+    ax.grid("on")
+    ax.set_ylabel(r"$m$")
+
+    for coupling in couplings:
+        magnetizations = []
+        mc_ferromagnet.coupling = coupling
+        for _ in range(5):
+            mc_ferromagnet.reset()
+            mc_ferromagnet.simulate_unit()
+            magnetization = mc_ferromagnet.mean_magnetization()[0]
+            magnetizations.append(magnetization)
+        ax.plot(np.ones(len(magnetizations))*coupling, magnetizations, '.', color='#1f77b4')
+
+    magnetizations_mf = np.linspace(-0.999, 0.999, 1000)
+    couplings_mf = lambda m: np.log((1+m)/(1-m))/(8*m)
+
+    ax.plot(couplings_mf(magnetizations_mf), magnetizations_mf, label='Mean field result')
+    ax.legend()
+    plt.show()
+
+
+def monte_carlo_2_5():
+    lattice_side, field = 10, 0
+    couplings = [0.3, 0.4, 0.6]
+    num_runs = [1000, 100000, 1000]
+    mc_ferromagnet = monte_carlo.FerroMagnet(0, field, 0, lattice_side)
+
+    fig, ax = plt.subplots(1, 3)
+    for idx in range(len(couplings)):
+        mc_ferromagnet.coupling = couplings[idx]
+        mc_ferromagnet.num_runs = num_runs[idx]
+        mc_ferromagnet.simulate_unit()
+        ax[idx].hist(mc_ferromagnet.magnetizations/lattice_side**2)
+
+    plt.show()
+
+
+def monte_carlo_3_1a():
+    field, num_runs = 0, 1000
+    lattice_sides = [5, 10, 15, 20]
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 0)
+    mc_ferromagnet.coupling = 0.5
+    for lattice_side in lattice_sides:
+        mc_ferromagnet.lattice_side = lattice_side
+        mc_ferromagnet.simulate_unit()
+        mc_ferromagnet.plot_results()
+    plt.show()
