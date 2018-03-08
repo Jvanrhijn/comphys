@@ -1,6 +1,8 @@
+import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 import lib.monte_carlo as monte_carlo
+from tqdm import tqdm
 from matplotlib import rc
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 12})
 rc('text', usetex=True)
@@ -247,9 +249,36 @@ def monte_carlo_3_1a():
     field, num_runs = 0, 1000
     lattice_sides = [5, 10, 15, 20]
     mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 0)
-    mc_ferromagnet.coupling = 0.5
-    for lattice_side in lattice_sides:
-        mc_ferromagnet.lattice_side = lattice_side
-        mc_ferromagnet.simulate_unit()
-        mc_ferromagnet.plot_results()
+    couplings = [0.3, 0.5]
+    for coupling in couplings:
+        mc_ferromagnet.coupling = coupling
+        for lattice_side in lattice_sides:
+            mc_ferromagnet.lattice_side = lattice_side
+            mc_ferromagnet.simulate_unit()
+            fig = mc_ferromagnet.plot_results()[0]
+            fig.suptitle("J = %f" % coupling)
+    plt.show()
+
+
+def monte_carlo_3_2a():
+    lattice_side, num_runs = 10, 1000
+    repeat = 3
+    couplings = np.linspace(0, 1, 50)
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
+    fig, ax = plt.subplots(1)
+    mean_magnetization = []
+    mean_magnetization_abs = []
+    for coupling in tqdm(couplings):
+        for _ in range(repeat):
+            mc_ferromagnet.coupling = coupling
+            mc_ferromagnet.simulate_unit(pbar=False)
+            mean_magnetization.append(mc_ferromagnet.mean_magnetization()[0])
+            mean_magnetization_abs.append(mc_ferromagnet.mean_magnetization(absolute=True)[0])
+
+    couplings = list(itertools.chain.from_iterable([[coupling]*repeat for coupling in couplings]))
+
+    ax.plot(couplings, mean_magnetization, '.', label=r'$\langle m \rangle$', color='#1f77b4')
+    ax.plot(couplings, mean_magnetization_abs, '.', label =r'$\langle |m| \rangle$', color='#ff7f0e')
+    ax.legend()
+    ax.grid('on')
     plt.show()

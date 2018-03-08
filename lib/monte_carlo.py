@@ -2,7 +2,7 @@
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-from progressbar import ProgressBar
+from tqdm import tqdm
 from matplotlib.gridspec import GridSpec
 from matplotlib import rc
 import lib.util as util
@@ -93,13 +93,16 @@ class MagnetSolver(MonteCarlo):
         """Initialize the Monte Carlo simulator state"""
         return SpinConfiguration.init_random(self._lattice_side, self._lattice_side)
 
-    def simulate_unit(self):
+    def simulate_unit(self, pbar=True):
         assert not self._done
         # Buffers for magnetization and energy in each unit step
         magnetizations_buf = np.zeros(self._lattice_side**2 + 1)
         energies_buf = np.zeros(self._lattice_side**2 + 1)
-        pbar = ProgressBar()
-        for self._unit_number in pbar(range(self._num_runs)):
+        if pbar:
+            iterator = tqdm(range(self._num_runs))
+        else:
+            iterator = range(self._num_runs)
+        for self._unit_number in iterator:
             # Initialize first value of buffer to value of previous unit step
             magnetizations_buf[0] = self.magnetizations[self._unit_number]
             energies_buf[0] = self.energies[self._unit_number]
@@ -114,12 +117,15 @@ class MagnetSolver(MonteCarlo):
             self.energies[self._unit_number+1] = energies_buf[-1]
         self._done = True
 
-    def simulate(self):
+    def simulate(self, pbar=True):
         """Run num_runs iterations and collect results"""
         assert not self._done
+        if pbar:
+            iterator = tqdm(range(self._num_runs))
+        else:
+            iterator = range(self._num_runs)
         # If not using unit steps, just do the iteration normally, saving values for each spin flip
-        pbar = ProgressBar()
-        for self._iteration_number in pbar(range(self._num_runs)):
+        for self._iteration_number in iterator:
             magnetization_difference, energy_difference = self._iterate()
             self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
                                                             + magnetization_difference
@@ -133,11 +139,16 @@ class MagnetSolver(MonteCarlo):
         error = np.std(self.energies[self._equilibration_time:])/self._lattice_side**2/np.sqrt(self._num_runs-1)
         return mean, error
 
-    def mean_magnetization(self):
+    def mean_magnetization(self, absolute=False):
         """Get mean magnetization per site and standard deviation"""
         assert self._done
-        mean = np.mean(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
-        error = np.std(self.magnetizations[self._equilibration_time:])/self._lattice_side**2/(np.sqrt(self._num_runs-1))
+        if not absolute:
+            mean = np.mean(self.magnetizations[self._equilibration_time:])/self._lattice_side**2
+            error = np.std(self.magnetizations[self._equilibration_time:])/self._lattice_side**2/(np.sqrt(self._num_runs-1))
+        else:
+            mean = np.mean(np.abs(self.magnetizations[self._equilibration_time:]))/self._lattice_side**2
+            error = np.std(np.abs(self.magnetizations[self._equilibration_time:]))\
+                / self._lattice_side**2/(np.sqrt(self._num_runs-1))
         return mean, error
 
     def susceptibility(self, absolute=False):
