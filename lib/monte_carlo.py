@@ -73,7 +73,9 @@ class MagnetSolver(MonteCarlo):
         self._lattice_side = lattice_side
         self.energies = np.zeros(self._num_runs+1)
         self.magnetizations = np.zeros(self._num_runs+1)
+        self.correlations = np.zeros((self._num_runs+1, self._lattice_side//2))
         self.configuration = self.init_state()
+        self.correlations[0, :] = self.configuration.correlation()
 
     def reset(self):
         """Reset the Monte Carlo simulator state"""
@@ -115,6 +117,7 @@ class MagnetSolver(MonteCarlo):
             # Save unit step results
             self.magnetizations[self._unit_number+1] = magnetizations_buf[-1]
             self.energies[self._unit_number+1] = energies_buf[-1]
+            self.correlations[self._unit_number+1] = self.configuration.correlation()
         self._done = True
 
     def simulate(self, pbar=True):
@@ -130,6 +133,7 @@ class MagnetSolver(MonteCarlo):
             self.magnetizations[self._iteration_number+1] = self.magnetizations[self._iteration_number] \
                                                             + magnetization_difference
             self.energies[self._iteration_number+1] = self.energies[self._iteration_number] + energy_difference
+            self.correlations[self._unit_number+1] = self.configuration.correlation()
         self._done = True
 
     def mean_energy(self):
@@ -160,6 +164,18 @@ class MagnetSolver(MonteCarlo):
         else:
             return (np.mean(abs(self.magnetizations[self._equilibration_time:])**2)
                     - np.mean(abs(self.magnetizations[self._equilibration_time:]))**2)/self._lattice_side**2
+
+    def correlation(self):
+        """Return the spin-spin correlation function"""
+        assert self._done
+        return np.mean(self.correlations, 0) - self.mean_magnetization()[0]**2
+
+    def plot_correlation(self, ax, *args, **kwargs):
+        """Plot the spin-spin correlation function"""
+        correlation = self.correlation()
+        distance = np.linspace(1, self._lattice_side//2, len(correlation))
+        ax.plot(distance, correlation, *args, **kwargs)
+        return ax
 
     def plot_results(self):
         """Plot the current state of the Monte Carlo simulation"""
@@ -332,6 +348,16 @@ class SpinConfiguration(object):
         magnetic_energy = 0 if magnetic_field == 0 else -magnetic_field*self.magnetization()
         exchange_energy = 0 if coupling == 0 else self._exchange_energy(coupling)
         return magnetic_energy + exchange_energy
+
+    def correlation(self):
+        """Returns <s_k*s_{k+r}>_k"""
+        average = 0
+        for row in range(self._rows):
+            for column in range(self._columns):
+                correlating_spins = np.concatenate((self._lattice[row, column+1:], self._lattice[row, :column+1]))\
+                    [:self._columns//2]
+                average += self._lattice[row, column]*correlating_spins
+        return average/(self._columns*self._rows)
 
     def flip_spin(self, row, column):
         """Flip a given spin in the lattice"""

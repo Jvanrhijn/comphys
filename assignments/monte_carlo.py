@@ -291,7 +291,7 @@ def monte_carlo_3_2a():
     plt.show()
 
 
-def monte_carlo_3_2b():
+def monte_carlo_3_2d():
 
     def set_labels(axis_list, xlabel, ylabel):
         for n in range(2):
@@ -300,11 +300,12 @@ def monte_carlo_3_2b():
                 axis_list[n, m].set_ylabel(ylabel)
                 axis_list[n, m].grid('on')
 
-    num_runs, field = 1000, 0
+    num_runs, field = 10000, 0
     lattice_sides = [5, 10, 15, 20]
     couplings = np.linspace(0.2, 0.6, 50)
     critical_point_index = abs(couplings - 0.4).argmin() + 1
     mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 0)
+    mc_ferromagnet.equilibration_time = 500
 
     # Figures:
     fig_m, ax_m = plt.subplots(2, 2)
@@ -336,4 +337,17 @@ def monte_carlo_3_2b():
         ax_susc[0 if idx < 2 else 1, idx % 2].plot(couplings, susceptibilities, '.')
         ax_susc[0 if idx < 2 else 1, idx % 2].set_title("L = %i" % lattice_side)
 
+    plt.show()
+
+
+def monte_carlo_3_3a():
+    lattice_side = 20
+    num_runs = 400
+    coupling = 0.5
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, coupling, lattice_side)
+    mc_ferromagnet.simulate_unit()
+
+    fig, ax = plt.subplots(1)
+    mc_ferromagnet.plot_correlation(ax, 'o')
+    ax.grid('on')
     plt.show()

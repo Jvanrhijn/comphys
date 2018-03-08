@@ -44,6 +44,17 @@ class SpinConfigTest(unittest.TestCase):
         row, column = random_flipped.flip_random()
         self.assertEqual(random_flipped[row, column], some_lattice[row, column]*-1)
 
+    def test_spin_correlation(self):
+        configuration = SpinConfiguration(np.ones((2, 2)))
+        correlation_manual = 1
+        self.assertEqual(correlation_manual, configuration.correlation())
+        configuration = SpinConfiguration(np.array([[1, -1], [-1, -1]]))
+        correlation_manual = 0
+        self.assertEqual(correlation_manual, configuration.correlation())
+        configuration = SpinConfiguration(np.array([[1, -1, -1, 1], [1, -1, -1, 1]]))
+        correlation_manual = np.array([0, -1])
+        np.testing.assert_array_equal(correlation_manual, configuration.correlation())
+
 
 class ParaMagnetTest(unittest.TestCase):
     """Tests for the paramagnet monte carlo solver"""
@@ -52,25 +63,25 @@ class ParaMagnetTest(unittest.TestCase):
         mc_paramagnet = ParaMagnet(2000, field, 10)
         mc_paramagnet.equilibration_time = 200
         exact_magnetization = np.tanh(field)
-        mc_paramagnet.simulate()
+        mc_paramagnet.simulate(pbar=False)
         mean_magnetization, error = mc_paramagnet.mean_magnetization()
         stdev = error*np.sqrt(1999)
         # Test may fail in 5% of cases
         self.assertTrue(exact_magnetization - 2*stdev < mean_magnetization < exact_magnetization + 2*stdev)
         with self.assertRaises(AssertionError):
-            mc_paramagnet.simulate()
+            mc_paramagnet.simulate(pbar=False)
 
     def test_reset(self):
         mc_paramagnet = ParaMagnet(2000, 1, 10)
         mc_paramagnet.equilibration_time = 200
-        mc_paramagnet.simulate()
+        mc_paramagnet.simulate(pbar=False)
         magnetization_first = mc_paramagnet.mean_magnetization()[0]
         mc_paramagnet.reset()
         self.assertFalse(mc_paramagnet.is_done())
         # If reset worked, energies & magnetizations should both be zero and equal
         np.testing.assert_array_equal(mc_paramagnet.magnetizations[1:], mc_paramagnet.energies[1:])
         # After second simulation, new magnetization should be close to but not equal to previous simulation
-        mc_paramagnet.simulate()
+        mc_paramagnet.simulate(pbar=False)
         mc_paramagnet.equilibration_time = 200
         magnetization_second = mc_paramagnet.mean_magnetization()[0]
         self.assertAlmostEqual(magnetization_first, magnetization_second, places=1)
@@ -92,7 +103,7 @@ class ParaMagnetTest(unittest.TestCase):
         side = 10
         num_units = 20
         mc_paramagnet = ParaMagnet(num_units, field, side)
-        mc_paramagnet.simulate_unit()
+        mc_paramagnet.simulate_unit(pbar=False)
         exact_magnetization = np.tanh(field)
         mc_paramagnet.equilibration_time = 2
         mean_magnetization, stdev = mc_paramagnet.mean_magnetization()
@@ -106,7 +117,7 @@ class TestFerroMagnet(unittest.TestCase):
         num_runs, field, coupling, lattice_side = 1000, 0, 0.5, 10
         mc_ferromagnet = FerroMagnet(num_runs, field, coupling, lattice_side)
         mc_ferromagnet.equilibration_time = num_runs//10
-        mc_ferromagnet.simulate_unit()
+        mc_ferromagnet.simulate_unit(pbar=False)
         self.assertAlmostEqual(mc_ferromagnet.configuration.energy(field, coupling), mc_ferromagnet.energies[-1])
 
 
