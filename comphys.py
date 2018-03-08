@@ -20,9 +20,16 @@ Example:
 """
 
 if __name__ == "__main__":
-    argument = sys.argv[1]
-    if argument in dir(excitons) + dir(monte_carlo):
-        eval(argument + "()")
+    first_argument = sys.argv[1]
+    valid_arguments = dir(excitons) + dir(monte_carlo)
+    if "-h" in sys.argv:
+        print("Valid arguments:")
+        for item in valid_arguments:
+            if 'monte_carlo' in item or 'excitons' in item:
+                print('    '+item)
+        exit(0)
+    if first_argument in valid_arguments:
+        eval(first_argument + "()")
         exit(0)
     else:
         print(usage)

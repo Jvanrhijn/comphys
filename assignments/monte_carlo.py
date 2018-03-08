@@ -272,13 +272,15 @@ def monte_carlo_3_2a():
         for _ in range(repeat):
             mc_ferromagnet.coupling = coupling
             mc_ferromagnet.simulate_unit(pbar=False)
-            mean_magnetization.append(mc_ferromagnet.mean_magnetization()[0])
-            mean_magnetization_abs.append(mc_ferromagnet.mean_magnetization(absolute=True)[0])
+            mean_magnetization.append(mc_ferromagnet.mean_magnetization()[0]**2)
+            mean_magnetization_abs.append(mc_ferromagnet.mean_magnetization(absolute=True)[0]**2)
 
     couplings = list(itertools.chain.from_iterable([[coupling]*repeat for coupling in couplings]))
 
-    ax.plot(couplings, mean_magnetization, '.', label=r'$\langle m \rangle$', color='#1f77b4')
-    ax.plot(couplings, mean_magnetization_abs, '.', label =r'$\langle |m| \rangle$', color='#ff7f0e')
+    ax.plot(couplings, mean_magnetization, '.', label=r'$\langle m \rangle$^2', color='#1f77b4')
+    ax.plot(couplings, mean_magnetization_abs, '.', label =r'$\langle |m| \rangle^2$', color='#ff7f0e')
+    ax.set_xlabel(r"$J$")
+    ax.set_ylabel(r"$m^2$")
     ax.legend()
     ax.grid('on')
     plt.show()
