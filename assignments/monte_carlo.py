@@ -328,12 +328,12 @@ def monte_carlo_3_2b():
             susceptibilities.append(susceptibility)
         magnetizations = np.array(magnetizations)
 
-        ax_m[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].plot(couplings, magnetizations, '.')
-        ax_m[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].set_title("L = %i" % lattice_side)
-        ax_power[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5]\
+        ax_m[0 if idx < 2 else 1, idx % 2].plot(couplings, magnetizations, '.')
+        ax_m[0 if idx < 2 else 1, idx % 2].set_title("L = %i" % lattice_side)
+        ax_power[0 if idx < 2 else 1, idx % 2]\
             .plot(np.log(magnetizations[critical_point_index:]), np.log(couplings[critical_point_index:] - 0.4), '.')
-        ax_power[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].set_title("L = %i" % lattice_side)
-        ax_susc[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].plot(couplings, susceptibilities, '.')
-        ax_susc[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].set_title("L = %i" % lattice_side)
+        ax_power[0 if idx < 2 else 1, idx % 2].set_title("L = %i" % lattice_side)
+        ax_susc[0 if idx < 2 else 1, idx % 2].plot(couplings, susceptibilities, '.')
+        ax_susc[0 if idx < 2 else 1, idx % 2].set_title("L = %i" % lattice_side)
 
     plt.show()
