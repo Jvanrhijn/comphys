@@ -342,12 +342,19 @@ def monte_carlo_3_2d():
 
 def monte_carlo_3_3a():
     lattice_side = 20
-    num_runs = 400
-    coupling = 0.5
-    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, coupling, lattice_side)
-    mc_ferromagnet.simulate_unit()
+    num_runs = 10000
+    couplings = [0.3, 0.4, 0.5]
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
+    mc_ferromagnet.equilibration_time = 100
 
     fig, ax = plt.subplots(1)
-    mc_ferromagnet.plot_correlation(ax, 'o')
+    for coupling in couplings:
+        mc_ferromagnet.coupling = coupling
+        mc_ferromagnet.simulate_unit()
+        mc_ferromagnet.plot_correlation(ax, label=r"$J = %2.1f$" % coupling)
+
     ax.grid('on')
+    ax.legend()
+    ax.set_xlabel(r"$r$")
+    ax.set_ylabel(r"$g(r)$")
     plt.show()

@@ -96,6 +96,7 @@ class MagnetSolver(MonteCarlo):
         return SpinConfiguration.init_random(self._lattice_side, self._lattice_side)
 
     def simulate_unit(self, pbar=True):
+        """Run num_runs unit sweeps of lattice_side**2 spin flips"""
         assert not self._done
         # Buffers for magnetization and energy in each unit step
         magnetizations_buf = np.zeros(self._lattice_side**2 + 1)
@@ -168,7 +169,7 @@ class MagnetSolver(MonteCarlo):
     def correlation(self):
         """Return the spin-spin correlation function"""
         assert self._done
-        return np.mean(self.correlations, 0) - self.mean_magnetization()[0]**2
+        return np.mean(self.correlations[self.equilibration_time:], 0) - self.mean_magnetization()[0]**2
 
     def plot_correlation(self, ax, *args, **kwargs):
         """Plot the spin-spin correlation function"""
@@ -354,8 +355,10 @@ class SpinConfiguration(object):
         average = 0
         for row in range(self._rows):
             for column in range(self._columns):
-                correlating_spins = np.concatenate((self._lattice[row, column+1:], self._lattice[row, :column+1]))\
-                    [:self._columns//2]
+                # To get the contributing spins incl. periodic BC, shift lattice left by k+1, then get the first
+                # columns/2 (rounded down) spins from the shifted lattice
+                correlating_spins = np.concatenate((self._lattice[row, column+1:],
+                                                    self._lattice[row, :column+1]))[:self._columns//2]
                 average += self._lattice[row, column]*correlating_spins
         return average/(self._columns*self._rows)
 
