@@ -172,6 +172,7 @@ def monte_carlo_2_4ab():
     lattice_side = 10
     couplings = np.linspace(0, 1, 20)
     mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
+    mc_ferromagnet.equilibration_time = 100
     fig, ax = plt.subplots(1, 2)
     for axis in ax:
         axis.set_xlabel(r"$J$")
@@ -206,6 +207,7 @@ def monte_carlo_2_4e():
     lattice_side = 10
     couplings = np.linspace(0, 1, 20)
     mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
+    mc_ferromagnet.equilibration_time = 100
     fig, ax = plt.subplots(1)
     ax.set_xlabel(r"$J$")
     ax.grid("on")
@@ -234,6 +236,7 @@ def monte_carlo_2_5():
     couplings = [0.3, 0.4, 0.6]
     num_runs = [1000, 100000, 1000]
     mc_ferromagnet = monte_carlo.FerroMagnet(0, field, 0, lattice_side)
+    mc_ferromagnet.equilibration_time = 100
 
     fig, ax = plt.subplots(1, 3)
     for idx in range(len(couplings)):
@@ -249,6 +252,7 @@ def monte_carlo_3_1a():
     field, num_runs = 0, 1000
     lattice_sides = [5, 10, 15, 20]
     mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 0)
+    mc_ferromagnet.equilibration_time = 100
     couplings = [0.3, 0.5]
     for coupling in couplings:
         mc_ferromagnet.coupling = coupling
@@ -268,6 +272,7 @@ def monte_carlo_3_2a():
     fig, ax = plt.subplots(1)
     mean_magnetization = []
     mean_magnetization_abs = []
+    mc_ferromagnet.equilibration_time = 100
     for coupling in tqdm(couplings):
         for _ in range(repeat):
             mc_ferromagnet.coupling = coupling
@@ -283,4 +288,52 @@ def monte_carlo_3_2a():
     ax.set_ylabel(r"$m^2$")
     ax.legend()
     ax.grid('on')
+    plt.show()
+
+
+def monte_carlo_3_2b():
+
+    def set_labels(axis_list, xlabel, ylabel):
+        for n in range(2):
+            for m in range(2):
+                axis_list[n, m].set_xlabel(xlabel)
+                axis_list[n, m].set_ylabel(ylabel)
+                axis_list[n, m].grid('on')
+
+    num_runs, field = 1000, 0
+    lattice_sides = [5, 10, 15, 20]
+    couplings = np.linspace(0.2, 0.6, 50)
+    critical_point_index = abs(couplings - 0.4).argmin() + 1
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 0)
+
+    # Figures:
+    fig_m, ax_m = plt.subplots(2, 2)
+    fig_power, ax_power = plt.subplots(2, 2)
+    fig_susc, ax_susc = plt.subplots(2, 2)
+
+    set_labels(ax_m, r"$J$", r"$\langle |m| \rangle$")
+    set_labels(ax_susc, r"$J$", r"$\chi'/N$")
+    set_labels(ax_power, r"$\ln(\langle |m| \rangle)$", r"$\ln(J - J_c)$")
+
+    for idx, lattice_side in enumerate(lattice_sides):
+        mc_ferromagnet.lattice_side = lattice_side
+        magnetizations = []
+        susceptibilities = []
+        for coupling in tqdm(couplings):
+            mc_ferromagnet.coupling = coupling
+            mc_ferromagnet.simulate_unit(pbar=False)
+            mean_magnetization = mc_ferromagnet.mean_magnetization(absolute=True)[0]
+            magnetizations.append(mean_magnetization)
+            susceptibility = mc_ferromagnet.susceptibility(absolute=True)
+            susceptibilities.append(susceptibility)
+        magnetizations = np.array(magnetizations)
+
+        ax_m[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].plot(couplings, magnetizations, '.')
+        ax_m[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].set_title("L = %i" % lattice_side)
+        ax_power[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5]\
+            .plot(np.log(magnetizations[critical_point_index:]), np.log(couplings[critical_point_index:] - 0.4), '.')
+        ax_power[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].set_title("L = %i" % lattice_side)
+        ax_susc[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].plot(couplings, susceptibilities, '.')
+        ax_susc[0 if idx < 2 else 1, 1 - (lattice_side % 10)//5].set_title("L = %i" % lattice_side)
+
     plt.show()
