@@ -251,7 +251,7 @@ def monte_carlo_2_5():
 def monte_carlo_3_1a():
     field, num_runs = 0, 1000
     lattice_sides = [5, 10, 15, 20]
-    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 0)
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 1)
     mc_ferromagnet.equilibration_time = 100
     couplings = [0.3, 0.5]
     for coupling in couplings:
@@ -304,7 +304,7 @@ def monte_carlo_3_2d():
     lattice_sides = [5, 10, 15, 20]
     couplings = np.linspace(0.2, 0.6, 50)
     critical_point_index = abs(couplings - 0.4).argmin() + 1
-    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 0)
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 0, 1)
     mc_ferromagnet.equilibration_time = 500
 
     # Figures:
@@ -357,4 +357,57 @@ def monte_carlo_3_3a():
     ax.legend()
     ax.set_xlabel(r"$r$")
     ax.set_ylabel(r"$g(r)$")
+    plt.show()
+
+
+def monte_carlo_3_4a():
+    lattice_side = 10
+    couplings = np.linspace(0, 1, 100)
+    num_runs = 1000
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, 0, 0, lattice_side)
+    mc_ferromagnet.equilibration_time = 100
+    energies = []
+
+    fig, ax = plt.subplots(1)
+
+    for coupling in tqdm(couplings):
+        mc_ferromagnet.coupling = coupling
+        mc_ferromagnet.simulate_unit(pbar=False)
+        energies.append(mc_ferromagnet.mean_energy()[0])
+
+    ax.plot(couplings, energies, '.')
+    ax.grid('on')
+    ax.set_xlabel(r"$J$")
+    ax.set_ylabel(r"$\langle E \rangle/N$")
+    plt.show()
+
+
+def monte_carlo_3_4c():
+    def set_labels(axis_list, xlabel, ylabel):
+        for n in range(2):
+            for m in range(2):
+                axis_list[n, m].set_xlabel(xlabel)
+                axis_list[n, m].set_ylabel(ylabel)
+                axis_list[n, m].grid('on')
+
+    num_runs, field = 200, 0
+    lattice_sides = [5, 10, 15, 20]
+    couplings = np.linspace(0.2, 0.6, 100)
+    mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 10, 1)
+    mc_ferromagnet.equilibration_time = 100
+
+    fig, ax = plt.subplots(2, 2)
+    set_labels(ax, r"$J$", r"$C_B$ (J/K) ")
+
+    for idx, lattice_side in enumerate(lattice_sides):
+        heat_capacities = []
+        mc_ferromagnet.lattice_side = lattice_side
+        for coupling in tqdm(couplings):
+            mc_ferromagnet.coupling = coupling
+            mc_ferromagnet.simulate_unit(pbar=False)
+            heat_capacities.append(mc_ferromagnet.heat_capacity())
+
+        ax[0 if idx < 2 else 1, idx % 2].plot(couplings, heat_capacities, '.')
+        ax[0 if idx < 2 else 1, idx % 2].set_title("L = %i" % lattice_side)
+
     plt.show()

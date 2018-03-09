@@ -169,7 +169,14 @@ class MagnetSolver(MonteCarlo):
     def correlation(self):
         """Return the spin-spin correlation function"""
         assert self._done
-        return np.mean(self.correlations[self.equilibration_time:], 0) - self.mean_magnetization()[0]**2
+        return np.mean(self.correlations[self.equilibration_time:], 0)/self._lattice_side**2 \
+            - self.mean_magnetization()[0]**2
+
+    def heat_capacity(self):
+        """Return the heat capacity per site of the magnet at constant magnetic field"""
+        boltzmann_constant = 1.38*10**-23
+        return boltzmann_constant*(
+                np.mean(self.energies[self._equilibration_time:]**2)/self._lattice_side**2 - self.mean_energy()[0])
 
     def plot_correlation(self, ax, *args, **kwargs):
         """Plot the spin-spin correlation function"""
@@ -309,6 +316,8 @@ class FerroMagnet(MagnetSolver):
 class SpinConfiguration(object):
     """Object representing spins on a lattice"""
     def __init__(self, lattice):
+        if lattice.shape == (0, 0):
+            raise ValueError("Cannot construct emppty lattice")
         if np.logical_or(np.equal(np.ones(lattice.shape), lattice), np.equal(np.ones(lattice.shape)*-1, lattice)).all():
             self._lattice = copy.deepcopy(lattice)
             self._rows = lattice.shape[0]
@@ -351,7 +360,7 @@ class SpinConfiguration(object):
         return magnetic_energy + exchange_energy
 
     def correlation(self):
-        """Returns <s_k*s_{k+r}>_k"""
+        """Returns <s_k*s_{k+r}>_k*rows*columns"""
         average = 0
         for row in range(self._rows):
             for column in range(self._columns):
@@ -360,7 +369,7 @@ class SpinConfiguration(object):
                 correlating_spins = np.concatenate((self._lattice[row, column+1:],
                                                     self._lattice[row, :column+1]))[:self._columns//2]
                 average += self._lattice[row, column]*correlating_spins
-        return average/(self._columns*self._rows)
+        return average
 
     def flip_spin(self, row, column):
         """Flip a given spin in the lattice"""
