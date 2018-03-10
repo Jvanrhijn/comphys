@@ -174,9 +174,7 @@ class MagnetSolver(MonteCarlo):
 
     def heat_capacity(self):
         """Return the heat capacity per site of the magnet at constant magnetic field"""
-        boltzmann_constant = 1.38*10**-23
-        return boltzmann_constant*(
-                np.mean(self.energies[self._equilibration_time:]**2)/self._lattice_side**2 - self.mean_energy()[0])
+        return np.mean(self.energies[self._equilibration_time:]**2)/self._lattice_side**2 - self.mean_energy()[0]
 
     def plot_correlation(self, ax, *args, **kwargs):
         """Plot the spin-spin correlation function"""

@@ -38,7 +38,7 @@ def monte_carlo_1_5e():
     lattice_sides = [5, 15, 30]
     num_runs = 5000
     field = 0.5
-    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, 0)
+    mc_paramagnet = monte_carlo.ParaMagnet(num_runs, field, 1)
     mc_paramagnet.equilibration_time = 500
     fig, ax = plt.subplots(1, len(lattice_sides), sharey=True)
     for n, lattice_side in enumerate(lattice_sides):
@@ -93,9 +93,9 @@ def monte_carlo_1_8a():
     mc_paramagnet = monte_carlo.ParaMagnet(num_runs, 0, lattice_side)
     mc_paramagnet.equilibration_time = 5
     susceptibility = []
-    for field in field_strengths:
+    for field in tqdm(field_strengths):
         mc_paramagnet.magnetic_field = field
-        mc_paramagnet.simulate_unit()
+        mc_paramagnet.simulate_unit(pbar=False)
         susceptibility.append(mc_paramagnet.susceptibility())
     fig, ax = plt.subplots(1)
     ax.plot(field_strengths, susceptibility, 'o', label='Monte Carlo result')
@@ -117,22 +117,22 @@ def monte_carlo_1_8b():
 
     def susceptibility_finite_difference(shift, mc_solver: monte_carlo.ParaMagnet):
         mc_solver.magnetic_field = field + shift/2
-        mc_solver.simulate_unit()
+        mc_solver.simulate_unit(pbar=False)
         magnetization_upper = mc_solver.mean_magnetization()[0]
         mc_solver.magnetic_field = field - shift/2
-        mc_solver.simulate_unit()
+        mc_solver.simulate_unit(pbar=False)
         magnetization_lower = mc_solver.mean_magnetization()[0]
         return (magnetization_upper - magnetization_lower)/shift
 
-    for field_shift in field_shifts:
+    for field_shift in tqdm(field_shifts):
         susceptibility = susceptibility_finite_difference(field_shift, mc_paramagnet)
         susceptibility_list.append(susceptibility)
 
     fig, ax = plt.subplots(1)
     ax.plot(field_shifts, np.ones(len(field_shifts))*1/np.cosh(1)**2, label=r'$1/\cosh^2(1)$')
-    ax.plot(field_shifts, susceptibility_list, 'o', label=r'$\Delta\chi / \Delta B$')
+    ax.plot(field_shifts, susceptibility_list, 'o', label=r'$\Delta m / \Delta B$')
     ax.set_xlabel(r"$\Delta B$")
-    ax.set_ylabel(r"$\partial (\chi/N) / \partial B$")
+    ax.set_ylabel(r"$\partial (m) / \partial B$")
     ax.legend()
     ax.grid('on')
     plt.show()
@@ -390,7 +390,7 @@ def monte_carlo_3_4c():
                 axis_list[n, m].set_ylabel(ylabel)
                 axis_list[n, m].grid('on')
 
-    num_runs, field = 200, 0
+    num_runs, field = 1000, 0
     lattice_sides = [5, 10, 15, 20]
     couplings = np.linspace(0.2, 0.6, 100)
     mc_ferromagnet = monte_carlo.FerroMagnet(num_runs, field, 10, 1)
