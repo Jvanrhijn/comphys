@@ -17,10 +17,18 @@ class TestTransferMat(unittest.TestCase):
         second = np.random.randint(0, 10, size=(2, 2))
         np.testing.assert_array_equal(transfer_matrix._product(first, second), np.dot(first, second))
 
-    def test_solve(self):
-        self.assertTrue(False)
+    def test_factors(self):
+        energy = 0
+        grid = np.arange(0, 1, 10)
+        transfer_matrix = wp.TransferMatrixSolver(grid, potential_square, energy)
+        p_matrix_expected = np.array([[2, 0],
+                                      [0, 2]])
+        q_matrix_expected = np.array([[np.e, 0],
+                                      [0, 1/np.e]])
+        np.testing.assert_array_almost_equal(p_matrix_expected, transfer_matrix._p_submatrix(1))
+        np.testing.assert_array_almost_equal(q_matrix_expected, transfer_matrix._q_submatrix(1))
 
-    def test_submatrices(self):
+    def test_solve(self):
         self.assertTrue(False)
 
 
@@ -38,8 +46,13 @@ class TestScatterMat(unittest.TestCase):
         result = np.array([[result_00, result_01], [result_10, result_11]])
         np.testing.assert_array_equal(scatter_matrix._product(first, second), result)
 
-    def test_factor(self):
-        self.assertTrue(False)
+    def test_factors(self):
+        energy = 0
+        grid = np.arange(0, 1, 10)
+        scatter_matrix = wp.ScatterMatrixSolver(grid, potential_square, energy)
+        factor_expected = np.array([[0, 1],
+                                    [1, 0]])
+        np.testing.assert_array_almost_equal(factor_expected, scatter_matrix._matrix_factor(1))
 
     def test_solve(self):
         self.assertTrue(False)
