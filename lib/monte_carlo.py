@@ -359,15 +359,12 @@ class SpinConfiguration(object):
 
     def correlation(self):
         """Returns <s_k*s_{k+r}>_k*rows*columns"""
-        average = 0
-        for row in range(self._rows):
-            for column in range(self._columns):
-                # To get the contributing spins incl. periodic BC, shift lattice left by k+1, then get the first
-                # columns/2 (rounded down) spins from the shifted lattice
-                correlating_spins = np.concatenate((self._lattice[row, column+1:],
-                                                    self._lattice[row, :column+1]))[:self._columns//2]
-                average += self._lattice[row, column]*correlating_spins
-        return average
+        total = 0
+        for column in range(self._rows):
+            correlating_spins = np.concatenate((self._lattice[:, column+1:],
+                                                self._lattice[:, :column+1]), axis=1)[:, :self._columns//2]
+            total += np.dot(self._lattice[:, column], correlating_spins)
+        return np.sum(total, axis=0)
 
     def flip_spin(self, row, column):
         """Flip a given spin in the lattice"""
