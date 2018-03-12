@@ -2,19 +2,49 @@
 import numpy as np
 
 
-class BaseMatrix:
+class BaseMatrixSolver:
 
-    def __init__(self, num_factors):
-        self._num_factors = num_factors
+    def __init__(self, grid, potential, energy):
+        self._grid = grid
+        self._energy = energy
+        self._num_factors = len(self._grid)
+        self._potential = potential(grid)
+
+    # private
+    def _product(self, first, second):
+        """Multiplication rule for two matrix factors"""
+        pass
+
+    def _matrix_factor(self, index):
+        """Calculate matrix factor [index] (i.e. M(x_i) or S(x_i))"""
+        pass
 
 
-class TransferMatrix(BaseMatrix):
+class TransferMatrixSolver(BaseMatrixSolver):
 
-    def __init__(self, num_factors):
-        super().__init__(num_factors)
+    def __init__(self, grid, potential, energy):
+        super().__init__(grid, potential, energy)
+
+    # private
+    def _product(self, first, second):
+        return np.dot(first, second)
+
+    def _matrix_factor(self, index):
+        pass
 
 
-class ScatteringMatrix(BaseMatrix):
+class ScatterMatrixSolver(BaseMatrixSolver):
 
-    def __init__(self, num_factors):
-        super().__init__(num_factors)
+    def __init__(self, grid, potential, energy,):
+        super().__init__(grid, potential, energy)
+
+    # private
+    def _product(self, first, second):
+        return np.array([[first[0, 0] + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                          first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])],
+                         [second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                          second[1, 1]*second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]])
+
+    def _matrix_factor(self, index):
+        pass
+
