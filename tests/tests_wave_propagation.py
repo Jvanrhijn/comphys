@@ -17,10 +17,11 @@ class TestTransferMat(unittest.TestCase):
         second = np.random.randint(0, 10, size=(2, 2))
         np.testing.assert_array_equal(transfer_matrix._product(first, second), np.dot(first, second))
 
-    def test_factor(self):
-        grid = np.arange(0, 1, 10)
-        transfer_matrix = wp.TransferMatrixSolver(grid, potential_square, 0.5)
-        self.assertEqual(1, 2)
+    def test_solve(self):
+        self.assertTrue(False)
+
+    def test_submatrices(self):
+        self.assertTrue(False)
 
 
 class TestScatterMat(unittest.TestCase):
@@ -38,6 +39,9 @@ class TestScatterMat(unittest.TestCase):
         np.testing.assert_array_equal(scatter_matrix._product(first, second), result)
 
     def test_factor(self):
+        self.assertTrue(False)
+
+    def test_solve(self):
         self.assertTrue(False)
 
 
