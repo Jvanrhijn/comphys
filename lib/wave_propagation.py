@@ -14,16 +14,16 @@ class BaseMatrixSolver:
         """Calculate the matrix representing the potential barrier/well.
         return transmission and reflection coefficients
         """
-        pass
+        return 0
 
     # private
     def _product(self, first, second):
         """Multiplication rule for two matrix factors"""
-        pass
+        return 0
 
     def _matrix_factor(self, index):
         """Calculate matrix factor [index] in total product"""
-        pass
+        return 0
 
 
 class TransferMatrixSolver(BaseMatrixSolver):
@@ -40,10 +40,21 @@ class TransferMatrixSolver(BaseMatrixSolver):
         pass
 
     def _p_submatrix(self, index):
-        pass
+        """Calculate matrix P(x_i)"""
+        wave_vector_here = np.sqrt(self._potential[index] - self._energy) if self._energy <= self._potential[index]\
+            else 1j*np.sqrt(self._energy - self._potential[index])
+        wave_vector_prev = np.sqrt(self._potential[index-1] - self._energy) if self._energy <= self._potential[index-1]\
+            else 1j*np.sqrt(self._energy - self._potential[index-1])
+        p = 1/(2*wave_vector_prev)*np.array([[wave_vector_prev + wave_vector_here, wave_vector_prev - wave_vector_here],
+                                             [wave_vector_prev - wave_vector_here, wave_vector_here + wave_vector_prev]])
+        return p
 
     def _q_submatrix(self, index):
-        pass
+        wave_vector_here = np.sqrt(self._potential[index] - self._energy) if self._energy <= self._potential[index]\
+            else 1j*np.sqrt(self._energy - self._potential[index])
+        q = np.array([[np.exp(wave_vector_here*self._grid_diff[index]), 0],
+                      [0, np.exp(-wave_vector_here*self._grid_diff[index])]])
+        return q
 
 
 class ScatterMatrixSolver(BaseMatrixSolver):
@@ -59,5 +70,5 @@ class ScatterMatrixSolver(BaseMatrixSolver):
                           second[1, 1]*second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]])
 
     def _matrix_factor(self, index):
-        pass
+        return 0
 

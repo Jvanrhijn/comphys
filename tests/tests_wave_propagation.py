@@ -11,7 +11,7 @@ def potential_square(x):
 class TestTransferMat(unittest.TestCase):
 
     def test_product(self):
-        grid = np.arange(0, 1,  10)
+        grid = np.linspace(0, 1, 11)
         transfer_matrix = wp.TransferMatrixSolver(grid, potential_square, 0.5)
         first = np.random.randint(0, 10, size=(2, 2))
         second = np.random.randint(0, 10, size=(2, 2))
@@ -19,12 +19,12 @@ class TestTransferMat(unittest.TestCase):
 
     def test_factors(self):
         energy = 0
-        grid = np.arange(0, 1, 10)
+        grid = np.linspace(0, 1, 11)
         transfer_matrix = wp.TransferMatrixSolver(grid, potential_square, energy)
-        p_matrix_expected = np.array([[2, 0],
-                                      [0, 2]])
-        q_matrix_expected = np.array([[np.e, 0],
-                                      [0, 1/np.e]])
+        p_matrix_expected = np.array([[1, 0],
+                                      [0, 1]])
+        q_matrix_expected = np.array([[np.e**0.1, 0],
+                                      [0, 1/np.e**0.1]])
         np.testing.assert_array_almost_equal(p_matrix_expected, transfer_matrix._p_submatrix(1))
         np.testing.assert_array_almost_equal(q_matrix_expected, transfer_matrix._q_submatrix(1))
 
@@ -35,7 +35,7 @@ class TestTransferMat(unittest.TestCase):
 class TestScatterMat(unittest.TestCase):
 
     def test_product(self):
-        grid = np.arange(0, 1, 10)
+        grid = np.linspace(0, 1, 11)
         first = np.random.randint(0, 10, size=(2, 2))
         second = np.random.randint(0, 10, size=(2, 2))
         scatter_matrix = wp.ScatterMatrixSolver(grid, potential_square, 0.5)
@@ -48,7 +48,7 @@ class TestScatterMat(unittest.TestCase):
 
     def test_factors(self):
         energy = 0
-        grid = np.arange(0, 1, 10)
+        grid = np.linspace(0, 1, 11)
         scatter_matrix = wp.ScatterMatrixSolver(grid, potential_square, energy)
         factor_expected = np.array([[0, 1],
                                     [1, 0]])
