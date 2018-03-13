@@ -364,7 +364,7 @@ class SpinConfiguration(object):
             correlating_spins = np.concatenate((self._lattice[:, column+1:],
                                                 self._lattice[:, :column+1]), axis=1)[:, :self._columns//2]
             total += np.dot(self._lattice[:, column], correlating_spins)
-        return np.sum(total, axis=0)
+        return total
 
     def flip_spin(self, row, column):
         """Flip a given spin in the lattice"""

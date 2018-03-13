@@ -50,10 +50,10 @@ class SpinConfigTest(unittest.TestCase):
         self.assertEqual(correlation_manual, configuration.correlation())
         configuration = SpinConfiguration(np.array([[1, -1], [-1, -1]]))
         correlation_manual = 0
-        #self.assertEqual(correlation_manual, configuration.correlation())
+        self.assertEqual(correlation_manual, configuration.correlation())
         configuration = SpinConfiguration(np.array([[1, -1, -1, 1], [1, -1, -1, 1]]))
-        correlation_manual = np.array([0, -8])
-        #np.testing.assert_array_equal(correlation_manual, configuration.correlation())
+        correlation_manual = np.array([0, -4])
+        np.testing.assert_array_equal(correlation_manual, configuration.correlation())
 
 
 class ParaMagnetTest(unittest.TestCase):
