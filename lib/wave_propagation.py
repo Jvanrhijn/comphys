@@ -11,13 +11,19 @@ class BaseMatrix:
                 raise ValueError("Matrix dimension must be 2x2")
             self._value = value
         else:
-            self._value = np.zeros((2, 2))
+            self._value = np.identity(2)
 
     def __get__(self, key):
         return self._value[key]
 
     def __set__(self, key, value):
         self._value[key] = value
+
+    def __matmul__(self, other):
+        return 0
+
+    def __rmatmul__(self, other):
+        return 0
 
     def transmission(self):
         """Get transmission coefficients of unit wave incoming from left and right, respectively"""
@@ -35,16 +41,16 @@ class BaseMatrixSolver:
         self._energy = energy
         self._num_factors = len(self._grid)
         self._potential = potential(grid)
-        self._matrix = BaseMatrix
+        self._Matrix = BaseMatrix
 
     def calculate(self):
         """Calculate the matrix representing the potential barrier/well.
         return
         """
-        total_product = np.identity(2)
+        total_product = self._Matrix()
         for index in range(1, self._num_factors):
-            total_product = self._product(total_product, self._matrix_factor(index))
-        return self._matrix(value=total_product)
+            total_product = total_product @ self._matrix_factor(index)
+        return total_product
 
     def _wave_vector(self, index):
         """Calculate the local wave vector (\eta_i in the lecture notes)"""
@@ -55,10 +61,6 @@ class BaseMatrixSolver:
             wave_vector = np.sqrt(self._energy - potential)*1j
         return wave_vector
 
-    def _product(self, first, second):
-        """Multiplication rule for two matrix factors"""
-        return 0
-
     def _matrix_factor(self, index):
         """Calculate matrix factor [index] in total product"""
         return 0
@@ -68,11 +70,7 @@ class TransferMatrixSolver(BaseMatrixSolver):
 
     def __init__(self, grid, potential, energy):
         super().__init__(grid, potential, energy)
-        self._matrix = TransferMatrix
-
-    # private
-    def _product(self, first, second):
-        return first @ second
+        self._Matrix = TransferMatrix
 
     def _matrix_factor(self, index):
         """Calculate factor M(x_i) product of transfer matrices"""
@@ -85,15 +83,15 @@ class TransferMatrixSolver(BaseMatrixSolver):
         upper_right = prefactor_off_diagonal*np.exp(-(wave_vector_prev+wave_vector_here)*here)
         lower_left = prefactor_off_diagonal*np.exp((wave_vector_here+wave_vector_prev)*here)
         lower_right = prefactor_diagonal*np.exp((wave_vector_prev-wave_vector_here)*here)
-        return np.array([[upper_left, upper_right],
-                         [lower_left, lower_right]])
+        return TransferMatrix(value=np.array([[upper_left, upper_right],
+                                              [lower_left, lower_right]]))
 
 
 class ScatterMatrixSolver(BaseMatrixSolver):
 
     def __init__(self, grid, potential, energy,):
         super().__init__(grid, potential, energy)
-        self._matrix = ScatterMatrix
+        self._Matrix = ScatterMatrix
 
     # private
     def _product(self, first, second):
@@ -117,8 +115,13 @@ class TransferMatrix(BaseMatrix):
     def __init__(self, value=None):
         super().__init__(value=value)
 
+    def __matmul__(self, other: BaseMatrix):
+        return TransferMatrix(value=self._value @ other._value)
+
+    def __rmatmul__(self, other: BaseMatrix):
+        return TransferMatrix(value=other._value @ self._value)
+
     def transmission(self):
         left = 1/np.abs(self._value[0, 0])**2
         right = np.abs(self._value[1, 1] - self._value[1, 0]*self._value[0, 1]/self._value[0, 0])**2
         return left, right
-

@@ -11,28 +11,26 @@ def potential_square(x):
 class TestTransferMatSolver(unittest.TestCase):
 
     def test_product(self):
-        grid = np.linspace(0, 1, 11)
-        transfer_matrix = wp.TransferMatrixSolver(grid, potential_square, 0.5)
-        first = np.random.randint(0, 10, size=(2, 2))
-        second = np.random.randint(0, 10, size=(2, 2))
-        np.testing.assert_array_equal(transfer_matrix._product(first, second), np.dot(first, second))
+        first = wp.TransferMatrix(value=np.random.randint(0, 10, size=(2, 2)))
+        second = wp.TransferMatrix(value=np.random.randint(0, 10, size=(2, 2)))
+        np.testing.assert_array_equal((first @ second)._value, np.dot(first._value, second._value))
 
     def test_factors(self):
         energy = 0
         grid = np.linspace(0, 0.5, 11)
         transfer_matrix = wp.TransferMatrixSolver(grid, potential_square, energy)
-        #factor_expected = np.array([[1, 0],
-                                    #[0, 1]])
-        #np.testing.assert_array_almost_equal(factor_expected, transfer_matrix._matrix_factor(1))
+        factor_expected = np.array([[1, 0],
+                                    [0, 1]])
+        np.testing.assert_array_almost_equal(factor_expected, transfer_matrix._matrix_factor(1)._value)
 
     def test_solve(self):
         grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 2)))
         width_barrier = 1
         energy = 0.5
         k, eta = np.sqrt(energy), np.sqrt(1 - energy)
-        t_analytical = (1 + ((k**2 + eta**2)/(2*k*eta))**2*np.sinh(eta*width_barrier))**-1
+        t_analytical = (1 + ((k**2 + eta**2)/(2*k*eta))**2*np.sinh(eta*width_barrier)**2)**-1
         transmission = wp.TransferMatrixSolver(grid, potential_square, energy).calculate().transmission()[0]
-        self.assertAlmostEqual(transmission, t_analytical, places=4)
+        self.assertAlmostEqual(transmission, t_analytical)
 
 
 class TestScatterMatSolver(unittest.TestCase):
@@ -74,7 +72,6 @@ class TestTransferMat(unittest.TestCase):
         values = np.zeros((3, 3))
         with self.assertRaises(ValueError):
             wp.TransferMatrix(value=values)
-        values = np.ones((2, 2))
 
     def test_transmission(self):
         transfer_matrix = wp.TransferMatrix(value=np.ones((2, 2)))
