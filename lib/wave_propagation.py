@@ -10,7 +10,7 @@ class BaseMatrixSolver:
         self._num_factors = len(self._grid)
         self._potential = potential(grid)
 
-    def solve(self):
+    def calculate(self):
         """Calculate the matrix representing the potential barrier/well.
         return transmission and reflection coefficients
         """

@@ -5,7 +5,7 @@ import lib.wave_propagation as wp
 
 
 def potential_square(x):
-    return np.heaviside(x, 1) - np.heaviside(x - 1, 1)
+    return np.heaviside(x + 0.5, 1) - np.heaviside(x - 0.5, 1)
 
 
 class TestTransferMat(unittest.TestCase):
@@ -29,7 +29,14 @@ class TestTransferMat(unittest.TestCase):
         np.testing.assert_array_almost_equal(q_matrix_expected, transfer_matrix._q_submatrix(1))
 
     def test_solve(self):
-        self.assertTrue(False)
+        grid = np.linspace(-0.5, 0.5, 100)
+        width_barrier = 1
+        energy = 0.5
+        k, eta = np.sqrt(energy), np.sqrt(1 - energy)
+        T_analytical = (1 + ((k**2 + eta**0.5)/(2*k*eta))*np.sinh(eta*width_barrier))**-1
+        transfer_solver = wp.TransferMatrixSolver(grid, potential_square, energy)
+        transmission = transfer_solver.calculate()
+        self.assertAlmostEqual(transmission, T_analytical)
 
 
 class TestScatterMat(unittest.TestCase):
@@ -55,10 +62,21 @@ class TestScatterMat(unittest.TestCase):
         np.testing.assert_array_almost_equal(factor_expected, scatter_matrix._matrix_factor(1))
 
     def test_solve(self):
-        self.assertTrue(False)
+        grid = np.linspace(-0.5, 0.5, 100)
+        width_barrier = 1
+        energy = 0.5
+        k, eta = np.sqrt(energy), np.sqrt(1 - energy)
+        T_analytical = (1 + ((k**2 + eta**0.5)/(2*k*eta))*np.sinh(eta*width_barrier))**-1
+        transfer_solver = wp.ScatterMatrixSolver(grid, potential_square, energy)
+        transmission = transfer_solver.calculate()
+        self.assertAlmostEqual(transmission, T_analytical)
 
 
 if __name__ == "__main__":
+    x = np.linspace(-1, 1, 1000)
+    plt.figure()
+    plt.plot(x, potential_square(x))
+    plt.show()
     suite_transfer = unittest.TestLoader().loadTestsFromTestCase(TestTransferMat)
     suite_scatter = unittest.TestLoader().loadTestsFromTestCase(TestScatterMat)
     unittest.TextTestRunner(verbosity=2).run(suite_transfer)
