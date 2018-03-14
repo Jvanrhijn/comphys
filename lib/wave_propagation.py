@@ -2,6 +2,32 @@
 import numpy as np
 
 
+class BaseMatrix:
+
+    def __init__(self, value=None):
+        """Base quantum matrix class"""
+        if value is not None:
+            if value.shape != (2, 2):
+                raise ValueError("Matrix dimension must be 2x2")
+            self._value = value
+        else:
+            self._value = np.zeros((2, 2))
+
+    def __get__(self, key):
+        return self._value[key]
+
+    def __set__(self, key, value):
+        self._value[key] = value
+
+    def transmission(self):
+        """Get transmission coefficients of unit wave incoming from left and right, respectively"""
+        return 0, 0
+
+    def reflection(self):
+        """Get reflection coefficients of unit wave incoming from left and right, respectively"""
+        return 0, 0
+
+
 class BaseMatrixSolver:
 
     def __init__(self, grid, potential, energy):
@@ -9,14 +35,26 @@ class BaseMatrixSolver:
         self._energy = energy
         self._num_factors = len(self._grid)
         self._potential = potential(grid)
+        self._matrix = BaseMatrix
 
     def calculate(self):
         """Calculate the matrix representing the potential barrier/well.
-        return transmission and reflection coefficients
+        return
         """
-        return 0
+        total_product = np.identity(2)
+        for index in range(1, self._num_factors):
+            total_product = self._product(total_product, self._matrix_factor(index))
+        return self._matrix(value=total_product)
 
-    # private
+    def _wave_vector(self, index):
+        """Calculate the local wave vector (\eta_i in the lecture notes)"""
+        potential = self._potential[index]
+        if self._energy <= potential:
+            wave_vector = np.sqrt(potential - self._energy)
+        else:
+            wave_vector = np.sqrt(self._energy - potential)*1j
+        return wave_vector
+
     def _product(self, first, second):
         """Multiplication rule for two matrix factors"""
         return 0
@@ -30,37 +68,32 @@ class TransferMatrixSolver(BaseMatrixSolver):
 
     def __init__(self, grid, potential, energy):
         super().__init__(grid, potential, energy)
-        self._grid_diff = np.diff(self._grid)
+        self._matrix = TransferMatrix
 
     # private
     def _product(self, first, second):
-        return np.dot(first, second)
+        return first @ second
 
     def _matrix_factor(self, index):
-        pass
-
-    def _p_submatrix(self, index):
-        """Calculate matrix P(x_i)"""
-        wave_vector_here = np.sqrt(self._potential[index] - self._energy) if self._energy <= self._potential[index]\
-            else 1j*np.sqrt(self._energy - self._potential[index])
-        wave_vector_prev = np.sqrt(self._potential[index-1] - self._energy) if self._energy <= self._potential[index-1]\
-            else 1j*np.sqrt(self._energy - self._potential[index-1])
-        p = 1/(2*wave_vector_prev)*np.array([[wave_vector_prev + wave_vector_here, wave_vector_prev - wave_vector_here],
-                                             [wave_vector_prev - wave_vector_here, wave_vector_here + wave_vector_prev]])
-        return p
-
-    def _q_submatrix(self, index):
-        wave_vector_here = np.sqrt(self._potential[index] - self._energy) if self._energy <= self._potential[index]\
-            else 1j*np.sqrt(self._energy - self._potential[index])
-        q = np.array([[np.exp(wave_vector_here*self._grid_diff[index]), 0],
-                      [0, np.exp(-wave_vector_here*self._grid_diff[index])]])
-        return q
+        """Calculate factor M(x_i) product of transfer matrices"""
+        wave_vector_prev = self._wave_vector(index-1)
+        wave_vector_here = self._wave_vector(index)
+        here = self._grid[index]
+        prefactor_diagonal = (wave_vector_prev + wave_vector_here)/(2*wave_vector_prev)
+        prefactor_off_diagonal = (wave_vector_prev - wave_vector_here)/(2*wave_vector_prev)
+        upper_left = prefactor_diagonal*np.exp(-(wave_vector_prev-wave_vector_here)*here)
+        upper_right = prefactor_off_diagonal*np.exp(-(wave_vector_prev+wave_vector_here)*here)
+        lower_left = prefactor_off_diagonal*np.exp((wave_vector_here+wave_vector_prev)*here)
+        lower_right = prefactor_diagonal*np.exp((wave_vector_prev-wave_vector_here)*here)
+        return np.array([[upper_left, upper_right],
+                         [lower_left, lower_right]])
 
 
 class ScatterMatrixSolver(BaseMatrixSolver):
 
     def __init__(self, grid, potential, energy,):
         super().__init__(grid, potential, energy)
+        self._matrix = ScatterMatrix
 
     # private
     def _product(self, first, second):
@@ -71,4 +104,21 @@ class ScatterMatrixSolver(BaseMatrixSolver):
 
     def _matrix_factor(self, index):
         return 0
+
+
+class ScatterMatrix(BaseMatrix):
+
+    def __init__(self, value=None):
+        super().__init__(value=value)
+
+
+class TransferMatrix(BaseMatrix):
+
+    def __init__(self, value=None):
+        super().__init__(value=value)
+
+    def transmission(self):
+        left = 1/np.abs(self._value[0, 0])**2
+        right = np.abs(self._value[1, 1] - self._value[1, 0]*self._value[0, 1]/self._value[0, 0])**2
+        return left, right
 
