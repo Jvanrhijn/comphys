@@ -36,16 +36,14 @@ class TestTransferMatSolver(unittest.TestCase):
 class TestScatterMatSolver(unittest.TestCase):
 
     def test_product(self):
-        grid = np.linspace(0, 1, 11)
-        first = np.random.randint(0, 10, size=(2, 2))
-        second = np.random.randint(0, 10, size=(2, 2))
-        scatter_matrix = wp.ScatterMatrixSolver(grid, potential_square, 0.5)
-        result_00 = first[0, 0] + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0])
-        result_01 = first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])
-        result_10 = second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0])
-        result_11 = second[1, 1]*second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])
+        first_mat = wp.ScatterMatrix(value=np.ones((2, 2))*0.5)
+        second_mat = wp.ScatterMatrix(value=np.ones((2, 2))*0.5)
+        result_00 = 2/3
+        result_01 = 1/3
+        result_10 = 1/3
+        result_11 = 2/3
         result = np.array([[result_00, result_01], [result_10, result_11]])
-        np.testing.assert_array_equal(scatter_matrix._product(first, second), result)
+        np.testing.assert_array_equal((first_mat @ second_mat)._value, result)
 
     def test_factors(self):
         energy = 0
@@ -53,14 +51,14 @@ class TestScatterMatSolver(unittest.TestCase):
         scatter_matrix = wp.ScatterMatrixSolver(grid, potential_square, energy)
         factor_expected = np.array([[0, 1],
                                     [1, 0]])
-        np.testing.assert_array_almost_equal(factor_expected, scatter_matrix._matrix_factor(1))
+        np.testing.assert_array_almost_equal(factor_expected, scatter_matrix._matrix_factor(1)._value)
 
     def test_solve(self):
-        grid = np.linspace(-0.5001, 0.5, 100)
+        grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 2)))
         width_barrier = 1
         energy = 0.5
         k, eta = np.sqrt(energy), np.sqrt(1 - energy)
-        t_analytical = (1 + ((k**2 + eta**2)/(2*k*eta))**2*np.sinh(eta*width_barrier))**-1
+        t_analytical = (1 + ((k**2 + eta**2)/(2*k*eta))**2*np.sinh(eta*width_barrier)**2)**-1
         scatter_solver = wp.ScatterMatrixSolver(grid, potential_square, energy)
         transmission = scatter_solver.calculate().transmission()[0]
         self.assertAlmostEqual(transmission, t_analytical)

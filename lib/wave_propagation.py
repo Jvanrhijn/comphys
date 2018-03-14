@@ -94,20 +94,42 @@ class ScatterMatrixSolver(BaseMatrixSolver):
         self._Matrix = ScatterMatrix
 
     # private
-    def _product(self, first, second):
-        return np.array([[first[0, 0] + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
-                          first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])],
-                         [second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
-                          second[1, 1]*second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]])
-
     def _matrix_factor(self, index):
-        return 0
+        here = self._grid[index]
+        wave_vector_prev = self._wave_vector(index-1)
+        wave_vector_here = self._wave_vector(index)
+        prefactor_diagonal = (wave_vector_prev - wave_vector_here)/(wave_vector_prev + wave_vector_here)
+        upper_left = prefactor_diagonal*np.exp(2*wave_vector_prev*here)
+        upper_right = 2*wave_vector_here/(wave_vector_here+wave_vector_prev)\
+            * np.exp((wave_vector_prev - wave_vector_here)*here)
+        lower_left = 2*wave_vector_prev/(wave_vector_prev + wave_vector_here)\
+            * np.exp((wave_vector_prev - wave_vector_here)*here)
+        lower_right = -prefactor_diagonal*np.exp(-2*wave_vector_here*here)
+        return ScatterMatrix(value=np.array([[upper_left, upper_right],
+                                             [lower_left, lower_right]]))
 
 
 class ScatterMatrix(BaseMatrix):
 
     def __init__(self, value=None):
         super().__init__(value=value)
+        if value is None:
+            self._value = np.array([[0, 1], [1, 0]])
+
+    def __matmul__(self, other: BaseMatrix):
+        """Multiplication rule for scatter matrices"""
+        first = self._value
+        second = other._value
+        return ScatterMatrix(value=
+                np.array([[first[0, 0] + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                          first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])],
+                         [second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                          second[1, 1] + second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]]))
+
+    def transmission(self):
+        left = np.abs(self._value[1, 0])**2
+        right = np.abs(self._value[0, 1])**2
+        return left, right
 
 
 class TransferMatrix(BaseMatrix):
@@ -117,9 +139,6 @@ class TransferMatrix(BaseMatrix):
 
     def __matmul__(self, other: BaseMatrix):
         return TransferMatrix(value=self._value @ other._value)
-
-    def __rmatmul__(self, other: BaseMatrix):
-        return TransferMatrix(value=other._value @ self._value)
 
     def transmission(self):
         left = 1/np.abs(self._value[0, 0])**2
