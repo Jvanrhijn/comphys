@@ -3,20 +3,24 @@ import numpy as np
 
 
 class BaseMatrix:
-
-    def __init__(self, value=None):
-        """Base quantum matrix class"""
-        if value is not None:
-            if value.shape != (2, 2):
+    """Base quantum matrix class"""
+    def __init__(self, *args):
+        if len(args) != 0:
+            if args[0].shape != (2, 2):
                 raise ValueError("Matrix dimension must be 2x2")
-            self._value = value
+            self._value = args[0]
         else:
             self._value = np.identity(2)
 
-    def __get__(self, key):
+    @property
+    def value(self):
+        """Return value of matrix as np.ndarray"""
+        return self._value
+
+    def __getitem__(self, key):
         return self._value[key]
 
-    def __set__(self, key, value):
+    def __setitem__(self, key, value):
         self._value[key] = value
 
     def __matmul__(self, other):
@@ -27,15 +31,15 @@ class BaseMatrix:
 
     def transmission(self):
         """Get transmission coefficients of unit wave incoming from left and right, respectively"""
-        return 0, 0
+        pass
 
     def reflection(self):
         """Get reflection coefficients of unit wave incoming from left and right, respectively"""
-        return 0, 0
+        pass
 
 
 class BaseMatrixSolver:
-
+    """Base matrix solver class, overridden by scattering/transfer matrix solvers"""
     def __init__(self, grid, potential, energy):
         self._grid = grid
         self._energy = energy
@@ -53,7 +57,7 @@ class BaseMatrixSolver:
         return total_product
 
     def _wave_vector(self, index):
-        """Calculate the local wave vector (\eta_i in the lecture notes)"""
+        """Calculate the local wave vector (eta_i in the lecture notes)"""
         potential = self._potential[index]
         if self._energy <= potential:
             wave_vector = np.sqrt(potential - self._energy)
@@ -63,11 +67,11 @@ class BaseMatrixSolver:
 
     def _matrix_factor(self, index):
         """Calculate matrix factor [index] in total product"""
-        return 0
+        pass
 
 
 class TransferMatrixSolver(BaseMatrixSolver):
-
+    """Transfer matrix class, overrides BaseMatrixSolver"""
     def __init__(self, grid, potential, energy):
         super().__init__(grid, potential, energy)
         self._Matrix = TransferMatrix
@@ -83,12 +87,12 @@ class TransferMatrixSolver(BaseMatrixSolver):
         upper_right = prefactor_off_diagonal*np.exp(-(wave_vector_prev+wave_vector_here)*here)
         lower_left = prefactor_off_diagonal*np.exp((wave_vector_here+wave_vector_prev)*here)
         lower_right = prefactor_diagonal*np.exp((wave_vector_prev-wave_vector_here)*here)
-        return TransferMatrix(value=np.array([[upper_left, upper_right],
+        return TransferMatrix(np.array([[upper_left, upper_right],
                                               [lower_left, lower_right]]))
 
 
 class ScatterMatrixSolver(BaseMatrixSolver):
-
+    """Scattering matrix solver class, overrides BaseMatrixSolver"""
     def __init__(self, grid, potential, energy,):
         super().__init__(grid, potential, energy)
         self._Matrix = ScatterMatrix
@@ -105,26 +109,28 @@ class ScatterMatrixSolver(BaseMatrixSolver):
         lower_left = 2*wave_vector_prev/(wave_vector_prev + wave_vector_here)\
             * np.exp((wave_vector_prev - wave_vector_here)*here)
         lower_right = -prefactor_diagonal*np.exp(-2*wave_vector_here*here)
-        return ScatterMatrix(value=np.array([[upper_left, upper_right],
+        return ScatterMatrix(np.array([[upper_left, upper_right],
                                              [lower_left, lower_right]]))
 
 
 class ScatterMatrix(BaseMatrix):
-
-    def __init__(self, value=None):
-        super().__init__(value=value)
-        if value is None:
+    """Scattering matrix class, implements multiplication rule & physical quantity calculation"""
+    def __init__(self, *args):
+        super().__init__(*args)
+        if len(args) == 0:
             self._value = np.array([[0, 1], [1, 0]])
 
     def __matmul__(self, other: BaseMatrix):
         """Multiplication rule for scatter matrices"""
-        first = self._value
-        second = other._value
-        return ScatterMatrix(value=
-                np.array([[first[0, 0] + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
-                          first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])],
-                         [second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
-                          second[1, 1] + second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]]))
+        first = self.value
+        second = other.value
+        return ScatterMatrix(
+                             np.array([[first[0, 0]
+                                        + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                                        first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])],
+                                       [second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                                        second[1, 1]
+                                        + second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]]))
 
     def transmission(self):
         left = np.abs(self._value[1, 0])**2
@@ -133,12 +139,12 @@ class ScatterMatrix(BaseMatrix):
 
 
 class TransferMatrix(BaseMatrix):
-
-    def __init__(self, value=None):
-        super().__init__(value=value)
+    """Transfer matrix class, implements multiplication rule & physical quantity calculation"""
+    def __init__(self, *args):
+        super().__init__(*args)
 
     def __matmul__(self, other: BaseMatrix):
-        return TransferMatrix(value=self._value @ other._value)
+        return TransferMatrix(self.value @ other.value)
 
     def transmission(self):
         left = 1/np.abs(self._value[0, 0])**2
