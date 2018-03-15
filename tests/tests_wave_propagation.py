@@ -24,8 +24,10 @@ class TestTransferMatSolver(unittest.TestCase):
         energy = 0.5
         k, eta = np.sqrt(energy), np.sqrt(1 - energy)
         t_analytical = (1 + ((k**2 + eta**2)/(2*k*eta))**2*np.sinh(eta*width_barrier)**2)**-1
-        transmission = wp.TransferMatrixSolver(grid, potential_square, energy).calculate().transmission()[0]
-        self.assertAlmostEqual(transmission, t_analytical)
+        transmission_left, transmission_right \
+            = wp.TransferMatrixSolver(grid, potential_square, energy).calculate().transmission()
+        self.assertAlmostEqual(transmission_left, t_analytical)
+        self.assertAlmostEqual(transmission_left, transmission_right)
 
 
 class TestScatterMatSolver(unittest.TestCase):
@@ -45,8 +47,9 @@ class TestScatterMatSolver(unittest.TestCase):
         k, eta = np.sqrt(energy), np.sqrt(1 - energy)
         t_analytical = (1 + ((k**2 + eta**2)/(2*k*eta))**2*np.sinh(eta*width_barrier)**2)**-1
         scatter_solver = wp.ScatterMatrixSolver(grid, potential_square, energy)
-        transmission = scatter_solver.calculate().transmission()[0]
-        self.assertAlmostEqual(transmission, t_analytical)
+        transmission_left, transmission_right = scatter_solver.calculate().transmission()
+        self.assertAlmostEqual(transmission_left, t_analytical)
+        self.assertAlmostEqual(transmission_left, transmission_right)
 
 
 class TestTransferMat(unittest.TestCase):
