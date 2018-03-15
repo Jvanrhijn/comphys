@@ -10,11 +10,6 @@ def potential_square(x):
 
 class TestTransferMatSolver(unittest.TestCase):
 
-    def test_product(self):
-        first = wp.TransferMatrix(np.random.randint(0, 10, size=(2, 2)))
-        second = wp.TransferMatrix(np.random.randint(0, 10, size=(2, 2)))
-        np.testing.assert_array_equal((first @ second)._value, np.dot(first._value, second._value))
-
     def test_factors(self):
         energy = 0
         grid = np.linspace(0, 0.5, 11)
@@ -34,16 +29,6 @@ class TestTransferMatSolver(unittest.TestCase):
 
 
 class TestScatterMatSolver(unittest.TestCase):
-
-    def test_product(self):
-        first_mat = wp.ScatterMatrix(np.ones((2, 2))*0.5)
-        second_mat = wp.ScatterMatrix(np.ones((2, 2))*0.5)
-        result_00 = 2/3
-        result_01 = 1/3
-        result_10 = 1/3
-        result_11 = 2/3
-        result = np.array([[result_00, result_01], [result_10, result_11]])
-        np.testing.assert_array_equal((first_mat @ second_mat).value, result)
 
     def test_factors(self):
         energy = 0
@@ -66,6 +51,11 @@ class TestScatterMatSolver(unittest.TestCase):
 
 class TestTransferMat(unittest.TestCase):
 
+    def test_product(self):
+        first = wp.TransferMatrix(np.random.randint(0, 10, size=(2, 2)))
+        second = wp.TransferMatrix(np.random.randint(0, 10, size=(2, 2)))
+        np.testing.assert_array_equal((first @ second)._value, np.dot(first._value, second._value))
+
     def test_init(self):
         values = np.zeros((3, 3))
         with self.assertRaises(ValueError):
@@ -75,6 +65,24 @@ class TestTransferMat(unittest.TestCase):
         transfer_matrix = wp.TransferMatrix(np.ones((2, 2)))
         self.assertEqual(transfer_matrix.transmission()[0], 1)
         self.assertEqual(transfer_matrix.transmission()[1], 0)
+
+
+class TestScatterMat(unittest.TestCase):
+
+    def test_product(self):
+        first_mat = wp.ScatterMatrix(np.ones((2, 2))*0.5)
+        second_mat = wp.ScatterMatrix(np.ones((2, 2))*0.5)
+        result_00 = 2/3
+        result_01 = 1/3
+        result_10 = 1/3
+        result_11 = 2/3
+        result = np.array([[result_00, result_01], [result_10, result_11]])
+        np.testing.assert_array_equal((first_mat @ second_mat).value, result)
+
+    def test_init(self):
+        values = np.zeros((3, 3))
+        with self.assertRaises(ValueError):
+            wp.ScatterMatrix(values)
 
 
 if __name__ == "__main__":
