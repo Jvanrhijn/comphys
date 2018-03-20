@@ -12,8 +12,8 @@ rc('text', usetex=True)
 
 def plot_grid_show(assignment):
     """Show all plots and show grids on the axes"""
-    def wrapper():
-        ax = assignment()
+    def wrapper(*args, **kwargs):
+        ax = assignment(*args, **kwargs)
         if type(ax) == np.ndarray:
             for axis in ax:
                 axis.grid()

@@ -70,6 +70,45 @@ class BaseMatrixSolver:
         pass
 
 
+class ScatterMatrix(BaseMatrix):
+    """Scattering matrix class, implements multiplication rule & physical quantity calculation"""
+    def __init__(self, *args):
+        super().__init__(*args)
+        if len(args) == 0:
+            self._value = np.array([[0, 1], [1, 0]])
+
+    def __matmul__(self, other: BaseMatrix):
+        """Multiplication rule for scatter matrices"""
+        first = self.value
+        second = other.value
+        return ScatterMatrix(
+            np.array([[first[0, 0]
+                       + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                       first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])],
+                      [second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
+                       second[1, 1]
+                       + second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]]))
+
+    def transmission(self):
+        left = np.abs(self._value[1, 0])**2
+        right = np.abs(self._value[0, 1])**2
+        return left, right
+
+
+class TransferMatrix(BaseMatrix):
+    """Transfer matrix class, implements multiplication rule & physical quantity calculation"""
+    def __init__(self, *args):
+        super().__init__(*args)
+
+    def __matmul__(self, other: BaseMatrix):
+        return TransferMatrix(self.value @ other.value)
+
+    def transmission(self):
+        left = 1/np.abs(self._value[0, 0])**2
+        right = np.abs(self._value[1, 1] - self._value[1, 0]*self._value[0, 1]/self._value[0, 0])**2
+        return left, right
+
+
 class TransferMatrixSolver(BaseMatrixSolver):
     """Transfer matrix class, overrides BaseMatrixSolver"""
     def __init__(self, grid, potential, energy):
@@ -113,40 +152,3 @@ class ScatterMatrixSolver(BaseMatrixSolver):
                                              [lower_left, lower_right]]))
 
 
-class ScatterMatrix(BaseMatrix):
-    """Scattering matrix class, implements multiplication rule & physical quantity calculation"""
-    def __init__(self, *args):
-        super().__init__(*args)
-        if len(args) == 0:
-            self._value = np.array([[0, 1], [1, 0]])
-
-    def __matmul__(self, other: BaseMatrix):
-        """Multiplication rule for scatter matrices"""
-        first = self.value
-        second = other.value
-        return ScatterMatrix(
-                             np.array([[first[0, 0]
-                                        + first[0, 1]*second[0, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
-                                        first[0, 1]*second[0, 1]/(1 - second[0, 0]*first[1, 1])],
-                                       [second[1, 0]*first[1, 0]/(1 - first[1, 1]*second[0, 0]),
-                                        second[1, 1]
-                                        + second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]]))
-
-    def transmission(self):
-        left = np.abs(self._value[1, 0])**2
-        right = np.abs(self._value[0, 1])**2
-        return left, right
-
-
-class TransferMatrix(BaseMatrix):
-    """Transfer matrix class, implements multiplication rule & physical quantity calculation"""
-    def __init__(self, *args):
-        super().__init__(*args)
-
-    def __matmul__(self, other: BaseMatrix):
-        return TransferMatrix(self.value @ other.value)
-
-    def transmission(self):
-        left = 1/np.abs(self._value[0, 0])**2
-        right = np.abs(self._value[1, 1] - self._value[1, 0]*self._value[0, 1]/self._value[0, 0])**2
-        return left, right

@@ -7,8 +7,7 @@ Command line args syntax:
 import sys
 from assignments.excitons import *
 from assignments.monte_carlo import *
-import assignments.excitons as excitons
-import assignments.monte_carlo as monte_carlo
+from assignments.wave_propagation import *
 
 
 usage = """
@@ -19,16 +18,24 @@ Example:
     $ python comphys.py excitons4b         
 """
 
+
+def is_valid_argument(arg):
+    is_assignment = "monte_carlo" in arg or "excitons" in arg or "wave_propagation" in arg
+    exists = arg in all_functions
+    return is_assignment and exists
+
+
 if __name__ == "__main__":
     first_argument = sys.argv[1]
-    valid_arguments = dir(excitons) + dir(monte_carlo)
+    global all_functions
+    all_functions = dir()
     if "-h" in sys.argv:
         print("Valid arguments:")
-        for item in valid_arguments:
-            if 'monte_carlo' in item or 'excitons' in item:
+        for item in all_functions:
+            if is_valid_argument(item):
                 print('    '+item)
         exit(0)
-    if first_argument in valid_arguments:
+    if is_valid_argument(first_argument):
         eval(first_argument + "()")
         exit(0)
     else:
