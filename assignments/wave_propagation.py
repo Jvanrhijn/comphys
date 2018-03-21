@@ -24,6 +24,13 @@ def transmission_square(energy, width):
     return (1 + ((k**2 + eta**2)/(2*k*eta)*np.sinh(eta*width))**2)**-1
 
 
+def transmission_wkb(grid, energy, potential, prefactor=1):
+    velocity_left = np.sqrt(energy - potential(grid[0]))
+    velocity_right = np.sqrt(energy - potential(grid[-1]))
+    return velocity_right/velocity_left*prefactor*np.exp(-2*np.trapz(np.sqrt(potential(grid[1:-1]) - energy),
+                                                                     grid[1:-1]))
+
+
 @plot_grid_show
 def wave_propagation1a():
     grid = np.array([-1, -0.5, 0, 0.5])
@@ -88,9 +95,41 @@ def wave_propagation2b():
         transmission_solver.calculate()
         transmission.append(transmission_solver.transmission()[0])
     fig, ax = plt.subplots(1)
-    ax.plot(energies, transmission)
+    ax.plot(energies, transmission, label="Triangular barrier")
+    ax.plot(energies, transmission_square(energies, width), label="Square barrier")
+    ax.set_xlabel(r"$\lambda$"), ax.set_ylabel(r"$T$")
+    ax.legend()
+    return ax
+
+
+@plot_grid_show
+def wave_propagation3a(delta=0.5, height=10):
+    potential = lambda x: potential_triangle(x, height, width, delta)
+
+    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 13000)))
+    width = 1
+    energies = np.linspace(0.01, height-delta, 100)
+
+    transmission = []
+    wkb = []
+    for energy in tqdm(energies):
+        transmission_solver = wp.ScatterMatrixSolver(grid, potential, energy)
+        transmission_solver.calculate()
+        transmission.append(transmission_solver.transmission()[0])
+        wkb_prefactor = 16*energy*(height - delta - energy)/height**2
+        wkb.append(transmission_wkb(grid, energy, potential, wkb_prefactor))
+
+    fig, ax = plt.subplots(1)
+    ax.semilogy(energies, transmission, label="Scattering matrix")
+    ax.semilogy(energies, wkb, label="WKB approximation")
+    ax.legend()
     ax.set_xlabel(r"$\lambda$"), ax.set_ylabel(r"$T$")
     return ax
 
 
+def wave_propagation3b():
+    wave_propagation3a(delta=2.5)
 
+
+def wave_propagation3c():
+    wave_propagation3a(delta=0.05, height=1)
