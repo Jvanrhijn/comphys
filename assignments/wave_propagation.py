@@ -70,7 +70,27 @@ def wave_propagation1d():
 
 def wave_propagation2a():
     energy = 0.5
-    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 10000)))
+    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 13000)))
     transmission_solver = wp.ScatterMatrixSolver(grid, lambda x: potential_triangle(x, 1, 1, 0.5), energy)
     transmission_solver.calculate()
-    print("T = %f" % transmission_solver.transmission()[0])
+    print("T = %f" % round(transmission_solver.transmission()[0], 5))
+
+
+@plot_grid_show
+def wave_propagation2b():
+    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 13000)))
+    height, width, delta = 1, 1, 0.5
+    energies = np.linspace(0.01, height-0.01, 100)
+    transmission = []
+    for energy in tqdm(energies):
+        transmission_solver = wp.ScatterMatrixSolver(grid,
+                                                     lambda x: potential_triangle(x, height, width, delta), energy)
+        transmission_solver.calculate()
+        transmission.append(transmission_solver.transmission()[0])
+    fig, ax = plt.subplots(1)
+    ax.plot(energies, transmission)
+    ax.set_xlabel(r"$\lambda$"), ax.set_ylabel(r"$T$")
+    return ax
+
+
+
