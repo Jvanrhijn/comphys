@@ -4,12 +4,18 @@ import lib.wave_propagation as wp
 from decorators.decorators import *
 from tqdm import tqdm
 from matplotlib import rc
-rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 12})
+rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 16})
 rc('text', usetex=True)
 
 
 def potential_square(x, height, width):
     return height*(np.heaviside(x + 0.5*width, 1) - np.heaviside(x - 0.5*width, 1))
+
+
+def potential_triangle(x, height, width, delta):
+    conditions = [x < -0.5*width, (x >= -0.5*width) & (x < 0.5*width), x >= 0.5*width]
+    functions = [lambda y: 0, lambda y: height - delta/width*(y + 0.5*width), lambda y: -delta]
+    return np.piecewise(x, conditions, functions)
 
 
 def transmission_square(energy, width):
@@ -37,9 +43,8 @@ def wave_propagation1a():
 
 
 @plot_grid_show
-def wave_propagation1b(matrix_solver=wp.TransferMatrixSolver):
+def wave_propagation1b(matrix_solver=wp.TransferMatrixSolver, energy=0.01):
     widths = np.linspace(0, 30, 100)
-    energy = 0.01
     transmissions_left = []
     transmissions_right = []
     for width in tqdm(widths):
@@ -58,3 +63,14 @@ def wave_propagation1b(matrix_solver=wp.TransferMatrixSolver):
 def wave_propagation1c():
     wave_propagation1b(matrix_solver=wp.ScatterMatrixSolver)
 
+
+def wave_propagation1d():
+    wave_propagation1b(energy=0.5)
+
+
+def wave_propagation2a():
+    energy = 0.5
+    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 10000)))
+    transmission_solver = wp.ScatterMatrixSolver(grid, lambda x: potential_triangle(x, 1, 1, 0.5), energy)
+    transmission_solver.calculate()
+    print("T = %f" % transmission_solver.transmission()[0])

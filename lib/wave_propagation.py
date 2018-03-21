@@ -30,8 +30,8 @@ class BaseMatrix:
         return 0
 
     def transmission(self):
-        """Get transmission coefficients of unit wave incoming from left and right, respectively"""
-        pass
+        """Get transmission coefficients of unit velocity wave incoming from left and right, respectively"""
+        return 0, 0
 
     def reflection(self):
         """Get reflection coefficients of unit wave incoming from left and right, respectively"""
@@ -46,6 +46,12 @@ class BaseMatrixSolver:
         self._num_factors = len(self._grid)
         self._potential = potential(grid)
         self._Matrix = BaseMatrix
+        self._result: BaseMatrix = None
+
+    @property
+    def matrix(self):
+        assert self._result is not None
+        return self._result
 
     def calculate(self):
         """Calculate the matrix representing the potential barrier/well.
@@ -54,7 +60,16 @@ class BaseMatrixSolver:
         total_product = self._Matrix()
         for index in range(1, self._num_factors):
             total_product = total_product @ self._matrix_factor(index)
+        self._result = total_product
         return total_product
+
+    def transmission(self):
+        """Calculate transmission coefficients of wave coming in from left and right of potential barriers"""
+        assert self._result is not None
+        velocity_left = np.sqrt(self._energy - self._potential[0])
+        velocity_right = np.sqrt(self._energy - self._potential[-1])
+        transmission_left, transmission_right = self._result.transmission()
+        return transmission_left*velocity_right/velocity_left, transmission_right*velocity_left/velocity_right
 
     def _wave_vector(self, index):
         """Calculate the local wave vector (eta_i in the lecture notes)"""
