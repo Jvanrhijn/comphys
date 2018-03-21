@@ -12,9 +12,9 @@ def potential_square(x, height, width):
     return height*(np.heaviside(x + 0.5*width, 1) - np.heaviside(x - 0.5*width, 1))
 
 
-def potential_triangle(x, height, width, delta):
+def potential_triangle(x, height, width, delta, reference: float=0):
     conditions = [x < -0.5*width, (x >= -0.5*width) & (x < 0.5*width), x >= 0.5*width]
-    functions = [lambda y: 0, lambda y: height - delta/width*(y + 0.5*width), lambda y: -delta]
+    functions = [lambda y: reference, lambda y: height - delta/width*(y + 0.5*width), lambda y: reference-delta]
     return np.piecewise(x, conditions, functions)
 
 
@@ -133,3 +133,31 @@ def wave_propagation3b():
 
 def wave_propagation3c():
     wave_propagation3a(delta=0.05, height=1)
+
+
+@plot_grid_show
+def wave_propagation4b(delta_builtin=0):
+    potential_bias = np.linspace(-52.5, 52.5, 100)
+    height, width = 28.9, 3
+    fermi_energy = 26.2
+    grid = np.array([-2] + list(np.linspace(-1.5, 1.5, 10000)))
+    currents = []
+
+    for delta in tqdm(potential_bias):
+        delta = delta + delta_builtin
+        potential = lambda x: potential_triangle(x, height, width, delta, reference=fermi_energy)
+        lower_integral_bound = fermi_energy - delta if fermi_energy > delta else 0
+        energies = np.linspace(lower_integral_bound, fermi_energy-0.01, 100)
+        transmission = np.zeros(len(energies))
+        for jj, energy in enumerate(energies):
+            transmission_solver = wp.ScatterMatrixSolver(grid, potential, energy)
+            transmission[jj] = transmission_solver.calculate().transmission()[0]
+            # transmission[jj] = transmission_solver.transmission()[0]
+        currents.append(-np.trapz(transmission, energies))
+    currents = np.array(currents)
+
+    fig, ax = plt.subplots(1)
+    ax.plot(potential_bias, currents, '.')
+    ax.set_xlabel(r"$\Delta \phi$ (V)"), ax.set_ylabel(r"$I_T$ (A)")
+    return ax
+
