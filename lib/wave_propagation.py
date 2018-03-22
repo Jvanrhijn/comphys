@@ -66,10 +66,9 @@ class BaseMatrixSolver:
     def transmission(self):
         """Calculate transmission coefficients of wave coming in from left and right of potential barriers"""
         assert self._result is not None
-        velocity_left = np.sqrt(self._energy - self._potential[0])
-        velocity_right = np.sqrt(self._energy - self._potential[-1])
+        velocity_left = np.sqrt(abs(self._energy - self._potential[0]))
+        velocity_right = np.sqrt(abs(self._energy - self._potential[-1]))
         transmission_left, transmission_right = self._result.transmission()
-        print(self._energy, self._potential[0], self._potential[-1])
         return transmission_left*velocity_right/velocity_left, transmission_right*velocity_left/velocity_right
 
     def _wave_vector(self, index):

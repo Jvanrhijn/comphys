@@ -138,9 +138,13 @@ def wave_propagation3c():
 
 
 @plot_grid_show
-def wave_propagation4b(delta_builtin=0):
-    potential_bias = np.linspace(-52.5, 52.5, 20)
-    fermi_energy = 26.24684
+def wave_propagation4b(delta_builtin: float=0, potential_bias: np.ndarray=None):
+    # Set up a potential bias grid; more points in the interesting (not flat) part of the curve
+    if potential_bias is None:
+        potential_bias = np.concatenate([np.linspace(-52.5, -26.5, 20),
+                                         np.linspace(-26.5, 26.5, 10),
+                                         np.linspace(26.5, 52.5, 20)])
+    fermi_energy = 26.25
     height, width = 55.1, 3
     grid = np.array([-2] + list(np.linspace(-1.5, 1.5, 100)))
     currents = []
@@ -148,19 +152,28 @@ def wave_propagation4b(delta_builtin=0):
         delta = delta + delta_builtin
         potential = lambda x: potential_triangle(x, height, width, delta, reference=0)
 
+        # Energy grid; include small offset in lower bound to prevent division by zero
         lower_integral_bound = fermi_energy - delta if fermi_energy > delta else 0
-        energies = np.linspace(lower_integral_bound, fermi_energy, 100)
+        energies = np.linspace(lower_integral_bound + 0.01, fermi_energy, 100)
 
         transmission = np.zeros(len(energies))
         for jj, energy in enumerate(energies):
             transmission_solver = wp.ScatterMatrixSolver(grid, potential, energy)
             transmission_solver.calculate().transmission()
             transmission[jj] = transmission_solver.transmission()[0]
-        currents.append(-np.trapz(transmission, energies))
+        currents.append(np.trapz(transmission, energies))
 
     currents = np.array(currents)
     fig, ax = plt.subplots(1)
-    ax.plot(potential_bias, currents, '.')
-    ax.set_xlabel(r"$\Delta \phi$ (V)"), ax.set_ylabel(r"$I_T$ (A)")
+    # Constants for converting scaled units to volts and amperes
+    volts = 38.1*10**-3  # eV; set e = 1 to get voltage
+    amperes = 2.952*10**-6
+    ax.plot(potential_bias*volts, currents*amperes*10**9)
+    ax.set_xlabel(r"$U$ (V)"), ax.set_ylabel(r"$I_T$ (nA)")
     return ax
 
+
+def wave_propagation4c():
+    potential_bias = np.concatenate([np.linspace(-52.5, 0, 10),
+                                     np.linspace(0, 52.5, 40)])
+    wave_propagation4b(delta_builtin=36.7, potential_bias=potential_bias)
