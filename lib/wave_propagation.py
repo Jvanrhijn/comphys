@@ -44,7 +44,8 @@ class BaseMatrixSolver:
         self._grid = grid
         self._energy = energy
         self._num_factors = len(self._grid)
-        self._potential = potential(grid)
+        grid_diff = grid[2] - grid[1] #  Quick 'n dirty, works for equidistant grids
+        self._potential = potential(grid+grid_diff/2)
         self._Matrix = BaseMatrix
         self._result: BaseMatrix = None
 
@@ -164,7 +165,5 @@ class ScatterMatrixSolver(BaseMatrixSolver):
             * np.exp((wave_vector_prev - wave_vector_here)*here)
         lower_right = -prefactor_diagonal*np.exp(-2*wave_vector_here*here)
         return ScatterMatrix(np.array([[upper_left, upper_right],
-                                             [lower_left, lower_right]]))
-
-
+                                       [lower_left, lower_right]]))
 
