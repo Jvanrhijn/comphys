@@ -79,7 +79,7 @@ def wave_propagation1d():
 
 def wave_propagation2a():
     energy = 0.5
-    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 100)))
+    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 150)))
     transmission_solver = wp.ScatterMatrixSolver(grid, lambda x: potential_triangle(x, 1, 1, 0.5), energy)
     transmission_solver.calculate()
     print("T = %f" % round(transmission_solver.transmission()[0], 5))
@@ -87,7 +87,7 @@ def wave_propagation2a():
 
 @plot_grid_show
 def wave_propagation2b():
-    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 13000)))
+    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 150)))
     height, width, delta = 1, 1, 0.5
     energies = np.linspace(0.01, height-0.01, 100)
     transmission = []
@@ -108,7 +108,7 @@ def wave_propagation2b():
 def wave_propagation3a(delta=0.5, height=10):
     potential = lambda x: potential_triangle(x, height, width, delta)
 
-    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 13000)))
+    grid = np.array([-1] + list(np.linspace(-0.5, 0.5, 150)))
     width = 1
     energies = np.linspace(0.01, height-delta, 100)
 
@@ -146,7 +146,7 @@ def wave_propagation4b(delta_builtin: float=0, potential_bias: np.ndarray=None):
                                          np.linspace(26.5, 52.5, 20)])
     fermi_energy = 26.25
     height, width = 55.1, 3
-    grid = np.array([-2] + list(np.linspace(-1.5, 1.5, 100)))
+    grid = np.array([-2] + list(np.linspace(-1.5, 1.5, 150)))
     currents = []
     for delta in tqdm(potential_bias):
         delta = delta + delta_builtin
@@ -177,3 +177,58 @@ def wave_propagation4c():
     potential_bias = np.concatenate([np.linspace(-52.5, 0, 10),
                                      np.linspace(0, 52.5, 40)])
     wave_propagation4b(delta_builtin=36.7, potential_bias=potential_bias)
+
+
+@plot_grid_show
+def wave_propagation4d():
+    energy_grid_length = 100
+
+    potential_bias = np.concatenate([np.linspace(-52.5, 0, 10),
+                                     np.linspace(0, 52.5, 40)])
+    fermi_energy = 26.25
+    height, width = 55.1, 3
+    delta_builtin = 36.7
+    grid = np.array([-2] + list(np.linspace(-1.5, 1.5, 150)))
+    currents = []
+
+    def calculate_transmission(grid, potential, energy_grid):
+        transmission_ = np.zeros(len(energy_grid))
+        for jj, energy in enumerate(energy_grid):
+            transmission_solver = wp.ScatterMatrixSolver(grid, potential, energy)
+            transmission_solver.calculate()
+            transmission_[jj] = transmission_solver.transmission()[0]
+        return transmission_
+
+    for delta in tqdm(potential_bias):
+        delta = delta + delta_builtin
+        potential = lambda x: potential_triangle(x, height, width, delta, reference=0)
+
+        if delta > 0:
+            lower_bound = 0
+            upper_bound = fermi_energy
+            energy_grid = np.linspace(lower_bound + 0.01, upper_bound, energy_grid_length)
+            transmission = calculate_transmission(grid, potential, energy_grid)
+            index = abs(energy_grid).argmin()
+            currents.append(
+                -delta*np.trapz(transmission[:index], energy_grid[:index])
+                + np.trapz((fermi_energy - energy_grid[index:])*transmission[index:], energy_grid[index:])
+            )
+        else:
+            lower_bound = -delta
+            upper_bound = fermi_energy-delta
+            energy_grid = np.linspace(lower_bound + 0.01, upper_bound, energy_grid_length)
+            transmission = calculate_transmission(grid, potential, energy_grid)
+            index = abs(energy_grid - fermi_energy).argmin()
+            currents.append(
+                -delta*np.trapz(transmission[:index], energy_grid[:index])
+                + np.trapz((fermi_energy - delta - energy_grid[index:])*transmission[index:], energy_grid[index:])
+            )
+
+    currents = np.array(currents)
+    fig, ax = plt.subplots(1)
+    # Constants for converting scaled units to volts and amperes
+    volts = 38.1*10**-3  # eV; set e = 1 to get voltage
+    amperes = 0.47
+    ax.plot(potential_bias*volts, currents*amperes*10**3)
+    ax.set_xlabel(r"$U$ (V)"), ax.set_ylabel(r"$I_T$ (mA)")
+    return ax
