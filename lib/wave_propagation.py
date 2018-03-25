@@ -44,7 +44,7 @@ class BaseMatrixSolver:
         self._grid = grid
         self._energy = energy
         self._num_factors = len(self._grid)
-        grid_diff = grid[2] - grid[1] #  Quick 'n dirty, works for equidistant grids
+        grid_diff = np.concatenate((np.diff(grid), np.zeros(1)))
         self._potential = potential(grid+grid_diff/2)
         self._Matrix = BaseMatrix
         self._result: BaseMatrix = None
