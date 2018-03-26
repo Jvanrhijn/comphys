@@ -1,4 +1,5 @@
 """This module contains classes needed for the Wave Propagation project"""
+import cmath
 import numpy as np
 
 
@@ -138,10 +139,10 @@ class TransferMatrixSolver(BaseMatrixSolver):
         here = self._grid[index]
         prefactor_diagonal = (wave_vector_prev + wave_vector_here)/(2*wave_vector_prev)
         prefactor_off_diagonal = (wave_vector_prev - wave_vector_here)/(2*wave_vector_prev)
-        upper_left = prefactor_diagonal*np.exp(-(wave_vector_prev-wave_vector_here)*here)
-        upper_right = prefactor_off_diagonal*np.exp(-(wave_vector_prev+wave_vector_here)*here)
-        lower_left = prefactor_off_diagonal*np.exp((wave_vector_here+wave_vector_prev)*here)
-        lower_right = prefactor_diagonal*np.exp((wave_vector_prev-wave_vector_here)*here)
+        upper_left = prefactor_diagonal*cmath.exp(-(wave_vector_prev-wave_vector_here)*here)
+        upper_right = prefactor_off_diagonal*cmath.exp(-(wave_vector_prev+wave_vector_here)*here)
+        lower_left = prefactor_off_diagonal*cmath.exp((wave_vector_here+wave_vector_prev)*here)
+        lower_right = prefactor_diagonal*cmath.exp((wave_vector_prev-wave_vector_here)*here)
         return TransferMatrix(np.array([[upper_left, upper_right],
                                               [lower_left, lower_right]]))
 
@@ -158,12 +159,12 @@ class ScatterMatrixSolver(BaseMatrixSolver):
         wave_vector_prev = self._wave_vector(index-1)
         wave_vector_here = self._wave_vector(index)
         prefactor_diagonal = (wave_vector_prev - wave_vector_here)/(wave_vector_prev + wave_vector_here)
-        upper_left = prefactor_diagonal*np.exp(2*wave_vector_prev*here)
+        upper_left = prefactor_diagonal*cmath.exp(2*wave_vector_prev*here)
         upper_right = 2*wave_vector_here/(wave_vector_here+wave_vector_prev)\
-            * np.exp((wave_vector_prev - wave_vector_here)*here)
+            * cmath.exp((wave_vector_prev - wave_vector_here)*here)
         lower_left = 2*wave_vector_prev/(wave_vector_prev + wave_vector_here)\
-            * np.exp((wave_vector_prev - wave_vector_here)*here)
-        lower_right = -prefactor_diagonal*np.exp(-2*wave_vector_here*here)
+            * cmath.exp((wave_vector_prev - wave_vector_here)*here)
+        lower_right = -prefactor_diagonal*cmath.exp(-2*wave_vector_here*here)
         return ScatterMatrix(np.array([[upper_left, upper_right],
                                        [lower_left, lower_right]]))
 
