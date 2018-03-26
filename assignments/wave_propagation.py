@@ -197,7 +197,7 @@ def wave_propagation4d():
         for jj, energy in enumerate(energy_grid):
             transmission_solver = wp.ScatterMatrixSolver(grid, potential, energy)
             transmission_solver.calculate()
-            transmission_[jj] = transmission_solver.transmission()[0]
+            transmission_[jj] = abs(transmission_solver.transmission()[0])
         return transmission_
 
     for delta in tqdm(potential_bias):

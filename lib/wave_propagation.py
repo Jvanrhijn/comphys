@@ -68,8 +68,8 @@ class BaseMatrixSolver:
     def transmission(self):
         """Calculate transmission coefficients of wave coming in from left and right of potential barriers"""
         assert self._result is not None
-        velocity_left = np.sqrt(abs(self._energy - self._potential[0]))
-        velocity_right = np.sqrt(abs(self._energy - self._potential[-1]))
+        velocity_left = cmath.sqrt(abs(self._energy - self._potential[0]))
+        velocity_right = cmath.sqrt(abs(self._energy - self._potential[-1]))
         transmission_left, transmission_right = self._result.transmission()
         return transmission_left*velocity_right/velocity_left, transmission_right*velocity_left/velocity_right
 
@@ -77,9 +77,9 @@ class BaseMatrixSolver:
         """Calculate the local wave vector (eta_i in the lecture notes)"""
         potential = self._potential[index]
         if self._energy <= potential:
-            wave_vector = np.sqrt(potential - self._energy)
+            wave_vector = cmath.sqrt(potential - self._energy)
         else:
-            wave_vector = np.sqrt(self._energy - potential)*1j
+            wave_vector = cmath.sqrt(self._energy - potential)*1j
         return wave_vector
 
     def _matrix_factor(self, index):
@@ -107,8 +107,8 @@ class ScatterMatrix(BaseMatrix):
                        + second[1, 0]*first[1, 1]*second[0, 1]/(1 - first[1, 1]*second[0, 0])]]))
 
     def transmission(self):
-        left = np.abs(self._value[1, 0])**2
-        right = np.abs(self._value[0, 1])**2
+        left = abs(self._value[1, 0])**2
+        right = abs(self._value[0, 1])**2
         return left, right
 
 
@@ -121,8 +121,8 @@ class TransferMatrix(BaseMatrix):
         return TransferMatrix(self.value @ other.value)
 
     def transmission(self):
-        left = 1/np.abs(self._value[0, 0])**2
-        right = np.abs(self._value[1, 1] - self._value[1, 0]*self._value[0, 1]/self._value[0, 0])**2
+        left = 1/abs(self._value[0, 0])**2
+        right = abs(self._value[1, 1] - self._value[1, 0]*self._value[0, 1]/self._value[0, 0])**2
         return left, right
 
 
