@@ -99,7 +99,7 @@ def wave_propagation2b():
     fig, ax = plt.subplots(1)
     ax.plot(energies, transmission, label="Triangular barrier")
     ax.plot(energies, transmission_square(energies, width), label="Square barrier")
-    ax.set_xlabel(r"$\lambda$"), ax.set_ylabel(r"$T$")
+    ax.set_xlabel(r"$a$"), ax.set_ylabel(r"$T$")
     ax.legend()
     return ax
 
@@ -125,7 +125,7 @@ def wave_propagation3a(delta=0.5, height=10):
     ax.semilogy(energies, transmission, label="Scattering matrix")
     ax.semilogy(energies, wkb, label="WKB approximation")
     ax.legend()
-    ax.set_xlabel(r"$\lambda$"), ax.set_ylabel(r"$T$")
+    ax.set_xlabel(r"$a$"), ax.set_ylabel(r"$T$")
     return ax
 
 
@@ -161,12 +161,12 @@ def wave_propagation4b(delta_builtin: float=0, potential_bias: np.ndarray=None):
             transmission_solver = wp.ScatterMatrixSolver(grid, potential, energy)
             transmission_solver.calculate().transmission()
             transmission[jj] = transmission_solver.transmission()[0]
-        currents.append(np.trapz(transmission, energies))
+        currents.append(-np.trapz(transmission, energies))
 
     currents = np.array(currents)
     fig, ax = plt.subplots(1)
     # Constants for converting scaled units to volts and amperes
-    volts = 38.1*10**-3  # eV; set e = 1 to get voltage
+    volts = -38.1*10**-3  # eV; set e = 1 to get voltage, minus sign for electron charge
     amperes = 2.952*10**-6
     ax.plot(potential_bias*volts, currents*amperes*10**9)
     ax.set_xlabel(r"$U$ (V)"), ax.set_ylabel(r"$I_T$ (nA)")
@@ -184,7 +184,8 @@ def wave_propagation4d():
     energy_grid_length = 100
 
     potential_bias = np.concatenate([np.linspace(-52.5, 0, 10),
-                                     np.linspace(0, 52.5, 40)])
+                                     np.linspace(0, 12.25, 20),
+                                     np.linspace(12.25, 52.5, 40)])
     fermi_energy = 26.25
     height, width = 55.1, 3
     delta_builtin = 36.7
@@ -211,7 +212,7 @@ def wave_propagation4d():
             index = abs(energy_grid).argmin()
             currents.append(
                 -delta*np.trapz(transmission[:index], energy_grid[:index])
-                + np.trapz((fermi_energy - energy_grid[index:])*transmission[index:], energy_grid[index:])
+                - np.trapz((fermi_energy - energy_grid[index:])*transmission[index:], energy_grid[index:])
             )
         else:
             lower_bound = -delta
@@ -221,13 +222,13 @@ def wave_propagation4d():
             index = abs(energy_grid - fermi_energy).argmin()
             currents.append(
                 -delta*np.trapz(transmission[:index], energy_grid[:index])
-                + np.trapz((fermi_energy - delta - energy_grid[index:])*transmission[index:], energy_grid[index:])
+                - np.trapz((fermi_energy - delta - energy_grid[index:])*transmission[index:], energy_grid[index:])
             )
 
     currents = np.array(currents)
     fig, ax = plt.subplots(1)
     # Constants for converting scaled units to volts and amperes
-    volts = 38.1*10**-3  # eV; set e = 1 to get voltage
+    volts = -38.1*10**-3  # eV; set e = 1 to get voltage, minus sign for electron charge
     amperes = 0.47
     ax.plot(potential_bias*volts, currents*amperes*10**3)
     ax.set_xlabel(r"$U$ (V)"), ax.set_ylabel(r"$I_T$ (mA)")
