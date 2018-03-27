@@ -11,8 +11,8 @@ class State:
         self._num_particles = num_particles
         self._dim = dim
         self._num_particles = num_particles
-        self._positions = np.zeros((dim, num_particles))
-        self._velocities = np.zeros((dim, num_particles))
+        self._positions = np.zeros((dim, num_particles), dtype=float)
+        self._velocities = np.zeros((dim, num_particles), dtype=float)
 
     @property
     def positions(self) -> np.ndarray:
@@ -52,7 +52,7 @@ class VerletIntegrator:
     """Iterator that yields the state of """
     def __init__(self, init_state, force_function, time_step):
         self._state = init_state
-        self._half_velocity = 0
+        self._half_velocity = 0.
         self._forces = force_function
         self._time_step = time_step
 

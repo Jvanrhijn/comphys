@@ -22,7 +22,7 @@ class TestState(unittest.TestCase):
     def test_integrator_step(self):
         no_force = lambda positions: 0
         constant_force = lambda positions: 1
-        sho_foce = lambda positions: -positions
+        sho_force = lambda positions: -positions
         init_state = md.State(1, dim=1)
         dt = 1
         integrator = md.VerletIntegrator(init_state, no_force, dt)
@@ -34,7 +34,13 @@ class TestState(unittest.TestCase):
         next_step = next(integrator)
         after_constant = md.State(1, dim=1)
         after_constant.positions = np.array([[0.5]])
-        after_constant.velocities = np.array([[1]])
+        after_constant.velocities = np.array([[1.]])
         nptest.assert_array_almost_equal(next_step.positions, after_constant.positions)
         nptest.assert_array_almost_equal(next_step.velocities, after_constant.velocities)
 
+        init_state = md.State(1, dim=1)
+        init_state.positions = np.array([[1.]])
+        integrator = md.VerletIntegrator(init_state, sho_force, dt)
+        next_step = next(integrator)
+        nptest.assert_array_almost_equal(next_step.positions, np.array([[0.5]]))
+        nptest.assert_array_almost_equal(next_step.velocities, np.array([[-0.75]]))
