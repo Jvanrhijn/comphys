@@ -48,15 +48,17 @@ class State:
         return self
 
 
-class VerletIntegrator:
-    """Iterator that yields the state of """
+class Integrator:
+    """Base integrator class"""
     def __init__(self, init_state, force_function, time_step):
         self._state = init_state
-        self._half_velocity = 0.
         self._forces = force_function
         self._time_step = time_step
 
+
+class VerletIntegrator(Integrator):
     def __iter__(self):
+        self._half_velocity = 0.
         return self
 
     def __next__(self):
