@@ -14,13 +14,6 @@ class TestState(unittest.TestCase):
         nptest.assert_array_equal(test_state.positions, defaults)
         nptest.assert_array_equal(test_state.velocities, defaults)
 
-    def test_forces(self):
-        def force_sho(k, state):
-            return -k*state.positions
-        test_state = md.State(3, 10).init_random((-1, 1), (-1, 1))
-        forces = test_state.forces(lambda state: force_sho(1, state))
-        nptest.assert_array_almost_equal(forces, test_state.positions*-1)
-
     def test_integrator_step(self):
         no_force = lambda state: 0
         constant_force = lambda state: 1

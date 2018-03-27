@@ -30,10 +30,6 @@ class State:
     def velocities(self, new_vel) -> None:
         self._velocities = new_vel
 
-    def forces(self, forces_function) -> np.ndarray:
-        """Calculate the forces on the current state given a force function"""
-        return forces_function(self)
-
     def init_random(self, position_range: tuple, velocity_range: tuple):
         """
         Initialize the State with random positions and velocities in a given range
