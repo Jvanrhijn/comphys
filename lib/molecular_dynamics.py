@@ -59,12 +59,11 @@ class Integrator:
 class VerletIntegrator(Integrator):
     """Integrator/iterator that implements Verlet algorithm"""
     def __iter__(self):
-        self._half_velocity = 0.
         return self
 
     def __next__(self):
-        self._half_velocity = self._state.velocities + 0.5*self._forces(self._state)*self._time_step
-        self._state.positions += self._half_velocity*self._time_step
-        self._state.velocities = self._half_velocity + 0.5*self._forces(self._state)*self._time_step
+        half_velocity = self._state.velocities + 0.5*self._forces(self._state)*self._time_step
+        self._state.positions += half_velocity*self._time_step
+        self._state.velocities = half_velocity + 0.5*self._forces(self._state)*self._time_step
         return self._state
 

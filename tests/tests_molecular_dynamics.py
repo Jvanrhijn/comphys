@@ -57,9 +57,7 @@ class TestState(unittest.TestCase):
         state = md.State(1, dim=1)
         state.positions = np.array([[1.]])
         integrator = md.VerletIntegrator(state, force, dt)
-        pos = []
 
         for n in range(0, num_steps):
             next(integrator)
-            pos.append(state.positions[0, 0])
         self.assertAlmostEqual(state.positions[0, 0], position_analytical(end_time))
