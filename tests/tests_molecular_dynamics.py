@@ -13,16 +13,16 @@ class TestState(unittest.TestCase):
         nptest.assert_array_equal(test_state.velocities, defaults)
 
     def test_forces(self):
-        def force_sho(k, positions):
-            return -k*positions
+        def force_sho(k, state):
+            return -k*state.positions
         test_state = md.State(3, 10).init_random((-1, 1), (-1, 1))
-        forces = test_state.forces(lambda pos: force_sho(1, pos))
+        forces = test_state.forces(lambda state: force_sho(1, state))
         nptest.assert_array_almost_equal(forces, test_state.positions*-1)
 
     def test_integrator_step(self):
-        no_force = lambda positions: 0
-        constant_force = lambda positions: 1
-        sho_force = lambda positions: -positions
+        no_force = lambda state: 0
+        constant_force = lambda state: 1
+        sho_force = lambda state: -state.positions
         init_state = md.State(1, dim=1)
         dt = 1
         integrator = md.VerletIntegrator(init_state, no_force, dt)
@@ -44,3 +44,5 @@ class TestState(unittest.TestCase):
         next_step = next(integrator)
         nptest.assert_array_almost_equal(next_step.positions, np.array([[0.5]]))
         nptest.assert_array_almost_equal(next_step.velocities, np.array([[-0.75]]))
+
+

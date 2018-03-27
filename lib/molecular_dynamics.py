@@ -32,7 +32,7 @@ class State:
 
     def forces(self, forces_function) -> np.ndarray:
         """Calculate the forces on the current state given a force function"""
-        return forces_function(self._positions)
+        return forces_function(self)
 
     def init_random(self, position_range: tuple, velocity_range: tuple):
         """
@@ -57,13 +57,14 @@ class Integrator:
 
 
 class VerletIntegrator(Integrator):
+    """Integrator/iterator that implements Verlet algorithm"""
     def __iter__(self):
         self._half_velocity = 0.
         return self
 
     def __next__(self):
-        self._half_velocity = self._state.velocities + 0.5*self._forces(self._state.positions)*self._time_step
+        self._half_velocity = self._state.velocities + 0.5*self._forces(self._state)*self._time_step
         self._state.positions += self._half_velocity*self._time_step
-        self._state.velocities = self._half_velocity + 0.5*self._forces(self._state.positions)*self._time_step
+        self._state.velocities = self._half_velocity + 0.5*self._forces(self._state)*self._time_step
         return self._state
 
