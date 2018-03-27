@@ -1,5 +1,7 @@
 import unittest
+import cmath
 import numpy as np
+import matplotlib.pyplot as plt
 import numpy.testing as nptest
 import lib.molecular_dynamics as md
 
@@ -45,4 +47,19 @@ class TestState(unittest.TestCase):
         nptest.assert_array_almost_equal(next_step.positions, np.array([[0.5]]))
         nptest.assert_array_almost_equal(next_step.velocities, np.array([[-0.75]]))
 
+    def test_integrator_full_simulation(self):
+        force = lambda state: -state.positions  # SHO with viscous damping force
+        position_analytical = lambda t: cmath.cos(t)
 
+        dt = 0.001  # Sufficiently small time step
+        end_time = 1
+        num_steps = int(end_time/dt)
+        state = md.State(1, dim=1)
+        state.positions = np.array([[1.]])
+        integrator = md.VerletIntegrator(state, force, dt)
+        pos = []
+
+        for n in range(0, num_steps):
+            next(integrator)
+            pos.append(state.positions[0, 0])
+        self.assertAlmostEqual(state.positions[0, 0], position_analytical(end_time))
