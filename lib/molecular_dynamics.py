@@ -133,3 +133,12 @@ class MDSimulator:
     def _calc_state_vars(self) -> None:
         for state_func in self._state_functions:
             self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state)
+
+
+class Visualizer:
+    """Class that provides various visualizations for a running simulation"""
+    def __init__(self, simulator):
+        self._simulator = simulator
+
+    def running_animation(self):
+        pass
