@@ -1,4 +1,5 @@
 """Classes for use in the Molecular Dynamics project"""
+import collections
 import copy
 import cmath
 import numpy as np
