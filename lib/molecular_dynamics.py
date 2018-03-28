@@ -17,10 +17,12 @@ class State:
 
     @property
     def positions(self) -> np.ndarray:
+        """State positions getter"""
         return self._positions
 
     @property
     def velocities(self) -> np.ndarray:
+        """State positions getter"""
         return self._velocities
 
     @positions.setter
@@ -45,8 +47,8 @@ class State:
         return self
 
 
-class Integrator:
-    """Base integrator class"""
+class VerletIntegrator:
+    """Integrator/iterator that implements Verlet algorithm"""
     def __init__(self, init_state, force_function, time_step, max_steps=np.inf):
         self._state = init_state
         self._forces = force_function
@@ -54,9 +56,6 @@ class Integrator:
         self._max_steps = max_steps
         self._step = 0
 
-
-class VerletIntegrator(Integrator):
-    """Integrator/iterator that implements Verlet algorithm"""
     def __iter__(self):
         return self
 
@@ -71,10 +70,12 @@ class VerletIntegrator(Integrator):
 
     @property
     def state(self):
+        """Current state getter"""
         return self._state
 
 
 class MDSimulator:
+    """Molecular dynamics simulator class"""
     def __init__(self, init_state, integrator, time_step, num_steps, force_function):
         self._integrator = integrator(init_state, force_function, time_step, max_steps=num_steps)
         self._forces = force_function
@@ -86,6 +87,7 @@ class MDSimulator:
         self._step = 0
 
     def simulate(self):
+        """Perform the molecular dynamics simulation with the given parameters"""
         for self._step, state in enumerate(self._integrator):
             self._calc_state_vars()
         return self._integrator.state
@@ -107,6 +109,7 @@ class MDSimulator:
 
     @property
     def state_vars(self):
+        """State variable getter"""
         return self._state_vars
 
     # Private
