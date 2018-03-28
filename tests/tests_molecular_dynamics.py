@@ -80,10 +80,11 @@ class TestSimulator(unittest.TestCase):
     def test_state_vars(self):
         energy = lambda s: 0.5*np.sum(s.positions**2 + s.velocities**2)
         num_steps = 100
-        dt = (1/(10**8*num_steps))**0.25  # Sufficiently small time step for error at most 10**-7
+        dt = (1/(10**4*num_steps))**0.25  # Sufficiently small time step for error at most 10**-7
         init_state = md.State(1, dim=1)
         init_state.positions = np.array([[1.]])
         sim = md.MDSimulator(init_state, md.VerletIntegrator, dt, num_steps, lambda state: -state.positions)
+        sim.save = True
         sim.set_state_vars(("energy", energy))
-        final_state = sim.simulate()
-        self.assertAlmostEqual(sim.state_vars["energy"][-1], energy(final_state))
+        sim.simulate()
+        nptest.assert_array_almost_equal(sim.state_vars["energy"], np.array([energy(state) for state in sim.states]))

@@ -1,4 +1,5 @@
 """Classes for use in the Molecular Dynamics project"""
+import copy
 import cmath
 import numpy as np
 import matplotlib.pyplot as plt
@@ -78,16 +79,21 @@ class MDSimulator:
     """Molecular dynamics simulator class"""
     def __init__(self, init_state, integrator, time_step, num_steps, force_function):
         self._integrator = integrator(init_state, force_function, time_step, max_steps=num_steps)
-        self._forces = force_function
-        self._time_step = time_step
         self._num_steps = num_steps
         self._end_time = num_steps*time_step
         self._state_vars = {}
         self._state_functions = []
         self._step = 0
+        self._states = np.zeros(num_steps, dtype=State)
+        self.save = False
 
     def simulate(self):
         """Perform the molecular dynamics simulation with the given parameters"""
+        if self.save:
+            for self._step, state in enumerate(self._integrator):
+                self._calc_state_vars()
+                self._states[self._step] = copy.deepcopy(state)
+            return self._integrator.state
         for self._step, state in enumerate(self._integrator):
             self._calc_state_vars()
         return self._integrator.state
@@ -108,11 +114,16 @@ class MDSimulator:
             self._state_functions.append((arg[0], arg[1]))
 
     @property
-    def state_vars(self):
+    def state_vars(self) -> dict:
         """State variable getter"""
         return self._state_vars
 
+    @property
+    def states(self) -> np.ndarray:
+        """Saved states getter"""
+        return self._states
+
     # Private
-    def _calc_state_vars(self):
+    def _calc_state_vars(self) -> None:
         for state_func in self._state_functions:
             self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state)
