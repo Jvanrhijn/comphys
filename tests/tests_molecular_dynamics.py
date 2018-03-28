@@ -18,6 +18,13 @@ class TestState(unittest.TestCase):
         self.assertTrue((abs(md.State(10).init_random(pos_range, vel_range).positions) < 2).all())
         self.assertTrue((abs(md.State(10).init_random(pos_range, vel_range).velocities) < 1).all())
 
+    def test_single_particle(self):
+        test_state = md.State(10).init_random((-1, 1), (-1, 1))
+        zero = test_state.get_single_particle(0)
+        one = test_state.get_single_particle(1)
+        nptest.assert_array_equal(zero.positions, test_state.positions[:, 0])
+        nptest.assert_array_equal(one.velocities, test_state.velocities[:, 1])
+
     def test_integrator_step(self):
         no_force = lambda state: 0
         constant_force = lambda state: 1

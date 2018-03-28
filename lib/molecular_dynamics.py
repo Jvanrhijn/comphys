@@ -34,6 +34,12 @@ class State:
     def velocities(self, new_vel) -> None:
         self._velocities = new_vel
 
+    def get_single_particle(self, num):
+        state = State(1, dim=self._dim)
+        state.positions = self._positions[:, num]
+        state.velocities = self._velocities[:, num]
+        return state
+
     def init_random(self, position_range: tuple, velocity_range: tuple):
         """
         Initialize the State with random positions and velocities in a given range

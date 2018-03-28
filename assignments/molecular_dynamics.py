@@ -8,6 +8,10 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 16})
 rc('text', usetex=True)
 
 
+def force_coupled_sho(state):
+    return -(2*state.positions - np.roll(state.positions, 1, axis=1) - np.roll(state.positions, -1, axis=-1))
+
+
 @plot_grid_show
 def molecular_dynamics1a():
     dt = 0.4*(1/10**3*8*np.pi)**(1/3)
@@ -29,3 +33,20 @@ def molecular_dynamics1a():
     ax[1].set_xlabel(r"$t$"),
     ax[0].legend()
     return ax
+
+
+def molecular_dynamics1c():
+    dt = 0.4*(1/10**3*8*np.pi)**(1/3)
+    num_steps = int(math.ceil(8*np.pi/dt))
+    init_state = md.State(100, dim=2).init_random((-1, 1), (-1, 1))
+
+    sim = md.MDSimulator(init_state, md.VerletIntegrator, dt, num_steps, force_coupled_sho)
+    energy = lambda s: 0.5*(np.sum(s.velocities**2 + (np.roll(s.positions, 1, axis=1) - s.positions)**2))
+    sim.set_state_vars(("Energy", energy))
+    sim.simulate()
+
+    time = np.linspace(dt, num_steps*dt, num_steps)
+    fig, ax = plt.subplots(1)
+    ax.plot(time, sim.state_vars["Energy"])
+    ax.set_ylim(0, 150)
+    plt.show()
