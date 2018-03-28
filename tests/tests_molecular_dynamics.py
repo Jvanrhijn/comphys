@@ -48,9 +48,9 @@ class TestState(unittest.TestCase):
         force = lambda state: -state.positions  # SHO
         position_analytical = lambda t: cmath.cos(t)
 
-        dt = 0.001  # Sufficiently small time step
-        end_time = 1
-        num_steps = int(end_time/dt)
+        num_steps = 100
+        dt = (1/(10**8*num_steps))**0.25  # Sufficiently small time step for error at most 10**-7
+        end_time = num_steps*dt
         state = md.State(1, dim=1)
         state.positions = np.array([[1.]])
         integrator = md.VerletIntegrator(state, force, dt)
