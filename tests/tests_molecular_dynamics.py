@@ -18,13 +18,6 @@ class TestState(unittest.TestCase):
         self.assertTrue((abs(md.State(10).init_random(pos_range, vel_range).positions) < 2).all())
         self.assertTrue((abs(md.State(10).init_random(pos_range, vel_range).velocities) < 1).all())
 
-    def test_forces(self):
-        def force_sho(k, state):
-            return -k*state.positions
-        test_state = md.State(3, 10).init_random((-1, 1), (-1, 1))
-        forces = test_state.forces(lambda state: force_sho(1, state))
-        nptest.assert_array_almost_equal(forces, test_state.positions*-1)
-
     def test_integrator_step(self):
         no_force = lambda state: 0
         constant_force = lambda state: 1
@@ -61,9 +54,7 @@ class TestState(unittest.TestCase):
         state = md.State(1, dim=1)
         state.positions = np.array([[1.]])
         integrator = md.VerletIntegrator(state, force, dt)
-        pos = []
 
         for n in range(0, num_steps):
             next(integrator)
-            pos.append(state.positions[0, 0])
         self.assertAlmostEqual(state.positions[0, 0], position_analytical(end_time))
