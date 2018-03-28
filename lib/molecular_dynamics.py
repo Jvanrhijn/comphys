@@ -1,3 +1,4 @@
+"""Classes for use in the Molecular Dynamics project"""
 import cmath
 import numpy as np
 import matplotlib.pyplot as plt
@@ -67,4 +68,3 @@ class VerletIntegrator(Integrator):
         self._state.positions += self._half_velocity*self._time_step
         self._state.velocities = self._half_velocity + 0.5*self._forces(self._state)*self._time_step
         return self._state
-

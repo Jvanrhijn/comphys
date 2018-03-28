@@ -13,6 +13,10 @@ class TestState(unittest.TestCase):
         defaults = np.zeros((3, 10))
         nptest.assert_array_equal(test_state.positions, defaults)
         nptest.assert_array_equal(test_state.velocities, defaults)
+        pos_range = (-2, 2)
+        vel_range = (-1, 1)
+        self.assertTrue((abs(md.State(10).init_random(pos_range, vel_range).positions) < 2).all())
+        self.assertTrue((abs(md.State(10).init_random(pos_range, vel_range).velocities) < 1).all())
 
     def test_forces(self):
         def force_sho(k, state):
@@ -48,7 +52,7 @@ class TestState(unittest.TestCase):
         nptest.assert_array_almost_equal(next_step.velocities, np.array([[-0.75]]))
 
     def test_integrator_full_simulation(self):
-        force = lambda state: -state.positions  # SHO with viscous damping force
+        force = lambda state: -state.positions  # SHO
         position_analytical = lambda t: cmath.cos(t)
 
         dt = 0.001  # Sufficiently small time step
