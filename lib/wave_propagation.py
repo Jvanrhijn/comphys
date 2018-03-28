@@ -32,10 +32,6 @@ class BaseMatrix:
 
     def transmission(self):
         """Get transmission coefficients of unit velocity wave incoming from left and right, respectively"""
-        return 0, 0
-
-    def reflection(self):
-        """Get reflection coefficients of unit wave incoming from left and right, respectively"""
         pass
 
 

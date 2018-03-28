@@ -38,7 +38,7 @@ def molecular_dynamics1a():
 def molecular_dynamics1c():
     dt = 0.4*(1/10**3*8*np.pi)**(1/3)
     num_steps = int(math.ceil(8*np.pi/dt))
-    init_state = md.State(100, dim=2).init_random((-1, 1), (-1, 1))
+    init_state = md.State(10, dim=2).init_random((-1, 1), (-1, 1))
 
     sim = md.MDSimulator(init_state, md.VerletIntegrator, dt, num_steps, force_coupled_sho)
     energy = lambda s: 0.5*(np.sum(s.velocities**2 + (np.roll(s.positions, 1, axis=1) - s.positions)**2))
@@ -48,5 +48,4 @@ def molecular_dynamics1c():
     time = np.linspace(dt, num_steps*dt, num_steps)
     fig, ax = plt.subplots(1)
     ax.plot(time, sim.state_vars["Energy"])
-    ax.set_ylim(0, 150)
     plt.show()
