@@ -8,6 +8,7 @@ import sys
 from assignments.excitons import *
 from assignments.monte_carlo import *
 from assignments.wave_propagation import *
+from assignments.molecular_dynamics import *
 
 
 usage = """
@@ -20,7 +21,8 @@ Example:
 
 
 def is_valid_argument(arg):
-    is_assignment = "monte_carlo" in arg or "excitons" in arg or "wave_propagation" in arg
+    is_assignment = "monte_carlo" in arg or "excitons" in arg or "wave_propagation" in arg \
+                    or "molecular_dynamics" in arg
     exists = arg in all_functions
     return is_assignment and exists
 

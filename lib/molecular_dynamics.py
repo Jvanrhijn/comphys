@@ -1,7 +1,6 @@
 """Classes for use in the Molecular Dynamics project"""
-import collections
 import copy
-import cmath
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 
