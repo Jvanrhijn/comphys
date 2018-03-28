@@ -9,7 +9,7 @@ rc('text', usetex=True)
 
 
 def force_coupled_sho(state):
-    return -(2*state.positions - np.roll(state.positions, 1, axis=1) - np.roll(state.positions, -1, axis=-1))
+    return -(2*state.positions - np.roll(state.positions, 1, axis=1) - np.roll(state.positions, -1, axis=1))
 
 
 @plot_grid_show
