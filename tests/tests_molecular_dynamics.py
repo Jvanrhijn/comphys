@@ -58,3 +58,32 @@ class TestState(unittest.TestCase):
         for n in range(0, num_steps):
             next(integrator)
         self.assertAlmostEqual(state.positions[0, 0], position_analytical(end_time))
+
+
+class TestSimulator(unittest.TestCase):
+
+    def test_init(self):
+        sim = md.MDSimulator(md.State(1, dim=1), md.VerletIntegrator, 0.001, 1000, lambda pos: 0)
+        self.assertEqual(md.State(1, dim=1).positions, sim._integrator._state.positions)
+        self.assertEqual(md.State(1, dim=1).velocities, sim._integrator._state.velocities)
+        self.assertAlmostEqual(0.001*1000, sim._end_time)
+
+    def test_simulation(self):
+        position_analytical = lambda t: cmath.cos(t)
+        num_steps = 100
+        dt = (1/(10**8*num_steps))**0.25  # Sufficiently small time step for error at most 10**-7
+        init_state = md.State(1, dim=1)
+        init_state.positions = np.array([[1.]])
+        sim = md.MDSimulator(init_state, md.VerletIntegrator, dt, num_steps, lambda state: -state.positions)
+        self.assertAlmostEqual(sim.simulate().positions[0, 0], position_analytical(sim._end_time))
+
+    def test_state_vars(self):
+        energy = lambda s: 0.5*np.sum(s.positions**2 + s.velocities**2)
+        num_steps = 100
+        dt = (1/(10**8*num_steps))**0.25  # Sufficiently small time step for error at most 10**-7
+        init_state = md.State(1, dim=1)
+        init_state.positions = np.array([[1.]])
+        sim = md.MDSimulator(init_state, md.VerletIntegrator, dt, num_steps, lambda state: -state.positions)
+        sim.set_state_vars(("energy", energy))
+        final_state = sim.simulate()
+        self.assertAlmostEqual(sim.state_vars["energy"][-1], energy(final_state))

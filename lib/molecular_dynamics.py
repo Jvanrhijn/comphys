@@ -47,10 +47,12 @@ class State:
 
 class Integrator:
     """Base integrator class"""
-    def __init__(self, init_state, force_function, time_step):
+    def __init__(self, init_state, force_function, time_step, max_steps=np.inf):
         self._state = init_state
         self._forces = force_function
         self._time_step = time_step
+        self._max_steps = max_steps
+        self._step = 0
 
 
 class VerletIntegrator(Integrator):
@@ -59,7 +61,55 @@ class VerletIntegrator(Integrator):
         return self
 
     def __next__(self):
+        if self._step >= self._max_steps:
+            raise StopIteration
         half_velocity = self._state.velocities + 0.5*self._forces(self._state)*self._time_step
         self._state.positions += half_velocity*self._time_step
         self._state.velocities = half_velocity + 0.5*self._forces(self._state)*self._time_step
+        self._step += 1
         return self._state
+
+    @property
+    def state(self):
+        return self._state
+
+
+class MDSimulator:
+    def __init__(self, init_state, integrator, time_step, num_steps, force_function):
+        self._integrator = integrator(init_state, force_function, time_step, max_steps=num_steps)
+        self._forces = force_function
+        self._time_step = time_step
+        self._num_steps = num_steps
+        self._end_time = num_steps*time_step
+        self._state_vars = {}
+        self._state_functions = []
+        self._step = 0
+
+    def simulate(self):
+        for self._step, state in enumerate(self._integrator):
+            self._calc_state_vars()
+        return self._integrator.state
+
+    def set_state_vars(self, *args) -> None:
+        """
+        Set the state variables to calculate at each time step
+        :param args: Tuples of names and the functions used to calculate the state variables
+
+        Example usage:
+        simulator.state_vars(
+                            ("energy", lambda s: 0.5*(np.sum(s.velocities**2) + sum(s.positions**2)),
+                            ("pressure", lambda s: ...)
+                            )
+        """
+        for arg in args:
+            self._state_vars[arg[0]] = np.zeros(self._num_steps)
+            self._state_functions.append((arg[0], arg[1]))
+
+    @property
+    def state_vars(self):
+        return self._state_vars
+
+    # Private
+    def _calc_state_vars(self):
+        for state_func in self._state_functions:
+            self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state)
