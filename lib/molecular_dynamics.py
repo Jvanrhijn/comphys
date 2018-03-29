@@ -29,12 +29,14 @@ class State:
 
     @positions.setter
     def positions(self, new_pos) -> None:
+        """State positions setter"""
         if new_pos.shape != self._positions.shape:
             raise ValueError("New positions must be of shape " + str(self._positions.shape))
         self._positions = new_pos
 
     @velocities.setter
     def velocities(self, new_vel) -> None:
+        """State velocities setter"""
         if new_vel.shape != self._velocities.shape:
             raise ValueError("New velocities must be of shape " + str(self._velocities.shape))
         self._velocities = new_vel
@@ -97,6 +99,10 @@ class Simulator:
         self._step = 0
         self._states = np.zeros(num_steps, dtype=State)
         self.save = False
+
+    def state(self):
+        """Get the current state of the internal integrator"""
+        return self._integrator.state
 
     def simulate(self):
         """Perform the molecular dynamics simulation with the given parameters"""

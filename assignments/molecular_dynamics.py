@@ -18,7 +18,7 @@ def force_coupled_sho(state):
 
 
 def molecular_dynamics1a():
-    dt = 0.4*(1/10**3*8*np.pi)**(1/3)
+    dt = 2*((5*10**-3)/(8*np.pi))**(1/3)
     num_steps = int(math.ceil(8*np.pi/dt))
     init_state = md.State(1, dim=1)
     init_state.positions = np.array([[1.]])
@@ -42,7 +42,7 @@ def molecular_dynamics1a():
     ax[1, 0].plot(time, velocities, label="Verlet")
     ax[1, 0].set_xlabel(r"$t$"),
 
-    ax[0, 1].plot(time, (abs(energy - 0.5)/0.5)*1000), ax[0, 1].set_ylabel(r"$(E(t) - E_0)/E_0$, $10^{-3}$")
+    ax[0, 1].plot(time, (energy - 0.5)/0.5*1000), ax[0, 1].set_ylabel(r"$(E(t) - E_0)/E_0$, $10^{-3}$")
     ax[1, 1].plot(time, sim.state_vars["Kinetic energy"], label="Kinetic energy")
     ax[1, 1].plot(time, sim.state_vars["Potential energy"], label="Potential energy")
     ax[1, 1].set_ylabel("Energy")
@@ -56,10 +56,33 @@ def molecular_dynamics1a():
 
 
 def molecular_dynamics1b():
-    pass
+    dt = ((5*10**-3)/(8*np.pi))**(1/3)
+    num_steps = int(math.ceil(8*np.pi/dt))
+    time = np.linspace(dt, num_steps*dt, num_steps)
+
+    position_range = [(-0.1, 0.1), (-1, 1), (-0.5, 0.5)]
+    velocity_range = [(-1, 1), (-0.1, 0.1), (-math.sqrt(0.5), math.sqrt(0.5))]
+    fig, ax = plt.subplots(1, len(position_range), sharey=True, figsize=(20, 10))
+    for idx, (pos_range, vel_range) in enumerate(zip(position_range, velocity_range)):
+        sim = md.Simulator(md.State(100, dim=1).init_random(pos_range, vel_range),
+                           md.VerletIntegrator, dt, num_steps, lambda s: -s.positions)
+
+        sim.set_state_vars(("Kinetic energy", lambda s: 0.5*(np.sum(s.velocities**2))),
+                           ("Potential energy", lambda s: 0.5*np.sum(s.positions**2)))
+        sim.simulate()
+        ax[idx].set_title(r"$x \in {0}$, $y \in {1}".format(
+            tuple(map(lambda x: round(x, 2), list(pos_range))),
+            tuple(map(lambda x: round(x, 2), list(vel_range)))))
+        ax[idx].plot(time, sim.state_vars["Kinetic energy"], label="Kinetic energy")
+        ax[idx].plot(time, sim.state_vars["Potential energy"], label="Potential energy")
+    for axis in ax:
+        axis.grid()
+        axis.legend()
+    plt.show()
+
 
 def molecular_dynamics1c():
-    dt = 0.4*(1/10**3*8*np.pi)**(1/3)
+    dt = 10*(1/10**3*8*np.pi)**(1/3)
     num_steps = int(math.ceil(8*np.pi/dt))
     init_state = md.State(10, dim=2).init_random((-1, 1), (-1, 1))
 
