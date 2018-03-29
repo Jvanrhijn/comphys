@@ -6,6 +6,7 @@ Python has a very nice syntax for decorators, known as the 'pie' syntax (PEP 318
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+import itertools
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
@@ -15,6 +16,7 @@ def plot_grid_show(assignment):
     def wrapper(*args, **kwargs):
         ax = assignment(*args, **kwargs)
         if type(ax) == np.ndarray:
+            ax = itertools.chain.from_iterable(ax)
             for axis in ax:
                 axis.grid()
         else:
