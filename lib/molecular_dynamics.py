@@ -60,6 +60,12 @@ class State:
             * (velocity_range[1] - velocity_range[0]) + velocity_range[0]
         return self
 
+    def center_of_mass(self) -> tuple:
+        """Calculate the center of mass of the collection of particles and its velocity vector"""
+        position_com = np.reshape(np.sum(self.positions, axis=1), (3, 1))/self._num_particles
+        velocity_com = np.reshape(np.sum(self.velocities, axis=1), (3, 1))/self._num_particles
+        return position_com, velocity_com
+
 
 class VerletIntegrator:
     """Integrator/iterator that implements Verlet algorithm"""

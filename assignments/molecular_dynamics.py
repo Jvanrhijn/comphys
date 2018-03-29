@@ -56,13 +56,13 @@ def molecular_dynamics1a():
 
 
 def molecular_dynamics1b():
-    dt = ((5*10**-3)/(8*np.pi))**(1/3)
-    num_steps = int(math.ceil(8*np.pi/dt))
+    dt = ((5*10**-3)/(4*np.pi))**(1/3)
+    num_steps = int(math.ceil(2*np.pi/dt))
     time = np.linspace(dt, num_steps*dt, num_steps)
 
-    position_range = [(-0.1, 0.1), (-1, 1), (-0.5, 0.5)]
+    position_range = [(-0.1, 0.1), (-1, 1), (-math.sqrt(0.5), math.sqrt(0.5))]
     velocity_range = [(-1, 1), (-0.1, 0.1), (-math.sqrt(0.5), math.sqrt(0.5))]
-    fig, ax = plt.subplots(1, len(position_range), sharey=True, figsize=(20, 10))
+    fig, ax = plt.subplots(1, len(position_range), sharey=True, figsize=(20, 5))
     for idx, (pos_range, vel_range) in enumerate(zip(position_range, velocity_range)):
         sim = md.Simulator(md.State(100, dim=1).init_random(pos_range, vel_range),
                            md.VerletIntegrator, dt, num_steps, lambda s: -s.positions)
@@ -70,28 +70,29 @@ def molecular_dynamics1b():
         sim.set_state_vars(("Kinetic energy", lambda s: 0.5*(np.sum(s.velocities**2))),
                            ("Potential energy", lambda s: 0.5*np.sum(s.positions**2)))
         sim.simulate()
-        ax[idx].set_title(r"$x \in {0}$, $y \in {1}".format(
-            tuple(map(lambda x: round(x, 2), list(pos_range))),
-            tuple(map(lambda x: round(x, 2), list(vel_range)))))
+        ax[idx].set_title(r"$x \in {0}$, $v \in {1}".format(
+            tuple(map(lambda x: round(x, 3), list(pos_range))),
+            tuple(map(lambda x: round(x, 3), list(vel_range)))))
         ax[idx].plot(time, sim.state_vars["Kinetic energy"], label="Kinetic energy")
         ax[idx].plot(time, sim.state_vars["Potential energy"], label="Potential energy")
     for axis in ax:
         axis.grid()
         axis.legend()
+    save_figure("1b_iii")
     plt.show()
 
 
 def molecular_dynamics1c():
-    dt = 10*(1/10**3*8*np.pi)**(1/3)
+    dt = ((5*10**-3)/(4*np.pi))**(1/3)
     num_steps = int(math.ceil(8*np.pi/dt))
-    init_state = md.State(10, dim=2).init_random((-1, 1), (-1, 1))
+    init_state = md.State(100, dim=1).init_random((-1, 1), (-1, 1))
 
     sim = md.Simulator(init_state, md.VerletIntegrator, dt, num_steps, force_coupled_sho)
-    energy = lambda s: 0.5*(np.sum(s.velocities**2 + (np.roll(s.positions, 1, axis=1) - s.positions)**2))
-    sim.set_state_vars(("Energy", energy))
+    sim.set_state_vars(("Kinetic energy", lambda s: np.sum(s.velocities**2)),
+                       ("Potential energy", lambda s: np.sum(np.roll(s.positions, 1, axis=1) - s.positions**2)))
     sim.simulate()
 
     time = np.linspace(dt, num_steps*dt, num_steps)
-    fig, ax = plt.subplots(1, figsize=(10, 5))
-    ax.plot(time, sim.state_vars["Energy"])
+    fig, ax = plt.subplots(1, figsize=(20, 10))
+    ax.plot(time, sim.state_vars["Kinetic energy"], time, sim.state_vars["Potential energy"])
     plt.show()

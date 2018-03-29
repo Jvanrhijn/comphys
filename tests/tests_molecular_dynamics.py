@@ -25,6 +25,16 @@ class TestState(unittest.TestCase):
         nptest.assert_array_equal(zero.positions, np.reshape(test_state.positions[:, 0], (3, 1)))
         nptest.assert_array_equal(one.velocities, np.reshape(test_state.velocities[:, 1], (3, 1)))
 
+    def test_center_of_mass(self):
+        state = md.State(2)
+        state.positions = np.array([[0, 1], [0, 2], [0, 3]])
+        state.velocities = np.array([[0, 2], [0, 3], [0, 4]])
+        position_com = np.reshape(np.array([0.5, 1, 1.5]), (3, 1))
+        velocity_com = np.reshape(np.array([1, 1.5, 2]), (3, 1))
+        nptest.assert_array_equal(position_com, state.center_of_mass()[0])
+        nptest.assert_array_equal(velocity_com, state.center_of_mass()[1])
+
+
     def test_integrator_step(self):
         no_force = lambda state: 0
         constant_force = lambda state: 1
