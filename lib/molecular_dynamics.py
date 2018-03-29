@@ -82,7 +82,7 @@ class VerletIntegrator:
         return self._state
 
 
-class MDSimulator:
+class Simulator:
     """Molecular dynamics simulator class"""
     def __init__(self, init_state, integrator, time_step, num_steps, force_function):
         self._integrator = integrator(init_state, force_function, time_step, max_steps=num_steps)

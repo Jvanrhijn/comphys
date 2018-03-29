@@ -19,7 +19,7 @@ def molecular_dynamics1a():
     init_state = md.State(1, dim=1)
     init_state.positions = np.array([[1.]])
 
-    sim = md.MDSimulator(init_state, md.VerletIntegrator, dt, num_steps, lambda s: -s.positions)
+    sim = md.Simulator(init_state, md.VerletIntegrator, dt, num_steps, lambda s: -s.positions)
     sim.save = True
     sim.set_state_vars(("Energy", lambda s: 0.5*(np.sum(s.positions**2 + s.velocities**2))))
     sim.simulate()
@@ -40,7 +40,7 @@ def molecular_dynamics1c():
     num_steps = int(math.ceil(8*np.pi/dt))
     init_state = md.State(10, dim=2).init_random((-1, 1), (-1, 1))
 
-    sim = md.MDSimulator(init_state, md.VerletIntegrator, dt, num_steps, force_coupled_sho)
+    sim = md.Simulator(init_state, md.VerletIntegrator, dt, num_steps, force_coupled_sho)
     energy = lambda s: 0.5*(np.sum(s.velocities**2 + (np.roll(s.positions, 1, axis=1) - s.positions)**2))
     sim.set_state_vars(("Energy", energy))
     sim.simulate()
