@@ -62,8 +62,8 @@ class State:
 
     def center_of_mass(self) -> tuple:
         """Calculate the center of mass of the collection of particles and its velocity vector"""
-        position_com = np.reshape(np.sum(self.positions, axis=1), (3, 1))/self._num_particles
-        velocity_com = np.reshape(np.sum(self.velocities, axis=1), (3, 1))/self._num_particles
+        position_com = np.reshape(np.sum(self.positions, axis=1), (self._dim, 1))/self._num_particles
+        velocity_com = np.reshape(np.sum(self.velocities, axis=1), (self._dim, 1))/self._num_particles
         return position_com, velocity_com
 
 
@@ -88,7 +88,6 @@ class VerletIntegrator:
         self._step += 1
         return self._state
 
-    @property
     def state(self):
         """Current state getter"""
         return self._state
@@ -108,7 +107,7 @@ class Simulator:
 
     def state(self):
         """Get the current state of the internal integrator"""
-        return self._integrator.state
+        return self._integrator.state()
 
     def simulate(self):
         """Perform the molecular dynamics simulation with the given parameters"""
@@ -149,7 +148,7 @@ class Simulator:
     # Private
     def _calc_state_vars(self) -> None:
         for state_func in self._state_functions:
-            self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state)
+            self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state())
 
 
 class Visualizer:
