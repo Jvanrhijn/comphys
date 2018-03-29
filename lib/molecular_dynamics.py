@@ -29,16 +29,20 @@ class State:
 
     @positions.setter
     def positions(self, new_pos) -> None:
+        if new_pos.shape != self._positions.shape:
+            raise ValueError("New positions must be of shape " + str(self._positions.shape))
         self._positions = new_pos
 
     @velocities.setter
     def velocities(self, new_vel) -> None:
+        if new_vel.shape != self._velocities.shape:
+            raise ValueError("New velocities must be of shape " + str(self._velocities.shape))
         self._velocities = new_vel
 
     def get_single_particle(self, num):
         state = State(1, dim=self._dim)
-        state.positions = self._positions[:, num]
-        state.velocities = self._velocities[:, num]
+        state.positions = np.reshape(self.positions[:, num], (self._dim, 1))
+        state.velocities = np.reshape(self.velocities[:, num], (self._dim, 1))
         return state
 
     def init_random(self, position_range: tuple, velocity_range: tuple):

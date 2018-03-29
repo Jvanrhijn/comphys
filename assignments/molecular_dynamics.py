@@ -55,6 +55,9 @@ def molecular_dynamics1a():
     plt.show()
 
 
+def molecular_dynamics1b():
+    pass
+
 def molecular_dynamics1c():
     dt = 0.4*(1/10**3*8*np.pi)**(1/3)
     num_steps = int(math.ceil(8*np.pi/dt))

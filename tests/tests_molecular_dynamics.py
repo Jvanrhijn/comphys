@@ -22,8 +22,8 @@ class TestState(unittest.TestCase):
         test_state = md.State(10).init_random((-1, 1), (-1, 1))
         zero = test_state.get_single_particle(0)
         one = test_state.get_single_particle(1)
-        nptest.assert_array_equal(zero.positions, test_state.positions[:, 0])
-        nptest.assert_array_equal(one.velocities, test_state.velocities[:, 1])
+        nptest.assert_array_equal(zero.positions, np.reshape(test_state.positions[:, 0], (3, 1)))
+        nptest.assert_array_equal(one.velocities, np.reshape(test_state.velocities[:, 1], (3, 1)))
 
     def test_integrator_step(self):
         no_force = lambda state: 0
