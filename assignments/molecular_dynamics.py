@@ -149,3 +149,4 @@ def molecular_dynamics1c():
     save_figure("1c_iv")
 
     plt.show()
+
