@@ -107,6 +107,7 @@ class Simulator:
         self._state_functions = []
         self._step = 0
         self._states = np.zeros(num_steps, dtype=State)
+        self._init_state = copy.deepcopy(self.state())
         self.save = False
 
     def state(self):
@@ -133,6 +134,12 @@ class Simulator:
         else:
             next(self._integrator)
             self._calc_state_vars()
+
+    def reset(self):
+        self._integrator.state = copy.deepcopy(self._init_state)
+        for key in self._state_vars:
+            self._state_vars[key] = np.zeros(self._num_steps)
+        self._states = np.zeros(self._num_steps, dtype=State)
 
     def set_state_vars(self, *args) -> None:
         """
@@ -198,7 +205,10 @@ class Visualizer:
 
     def _update_cloud(self, i):
         assert self._points is not None
-        self._simulator.advance_state()
+        try:
+            self._simulator.advance_state()
+        except StopIteration:
+            self._simulator.state().init_random(self._simulator)
         xs = self._simulator.state().positions[0, :]
         ys = self._simulator.state().positions[1, :]
         zs = self._simulator.state().positions[2, :]
