@@ -92,9 +92,14 @@ class VerletIntegrator:
         self._step += 1
         return self._state
 
+    @property
     def state(self):
         """Current state getter"""
         return self._state
+
+    @state.setter
+    def state(self, new_state):
+        self._state = new_state
 
 
 class Simulator:
@@ -112,7 +117,7 @@ class Simulator:
 
     def state(self):
         """Get the current state of the internal integrator"""
-        return self._integrator.state()
+        return self._integrator.state
 
     def simulate(self):
         """Perform the molecular dynamics simulation with the given parameters"""
@@ -174,9 +179,13 @@ class Simulator:
 
 class Visualizer:
     """Class that provides various visualizations for a running simulation"""
-    def __init__(self, simulator):
+    def __init__(self, simulator, inf_sim=False):
         self._simulator = simulator
         self._points = None
+        if inf_sim:
+            if self._simulator.save:
+                raise ValueError("Cannot save states if continuing simulation indefinitely")
+            simulator._integrator._max_steps = np.inf
 
     @staticmethod
     def plot_particle_cloud(state, *args):
@@ -205,10 +214,7 @@ class Visualizer:
 
     def _update_cloud(self, i):
         assert self._points is not None
-        try:
-            self._simulator.advance_state()
-        except StopIteration:
-            self._simulator.state().init_random(self._simulator)
+        self._simulator.advance_state()
         xs = self._simulator.state().positions[0, :]
         ys = self._simulator.state().positions[1, :]
         zs = self._simulator.state().positions[2, :]
