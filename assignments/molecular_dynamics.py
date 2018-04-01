@@ -6,7 +6,7 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 20})
 rc('text', usetex=True)
 
 
-def save_figure(fname):
+def save_figure(fname) -> None:
     plt.savefig('/home/jesse/Dropbox/Uni/Jaar 3/Computational physics/molecular_dynamics/'+fname+'.pdf', format='pdf')
 
 
@@ -160,14 +160,15 @@ def molecular_dynamics1c():
 def molecular_dynamics2d():
     num_particles = 125
     num_steps = 100
-    dt = (10**-4/num_steps)**0.25
+    dt = (10**-8/num_steps)**0.25
     time = np.linspace(dt, dt*num_steps, num_steps)
 
     init_state = md.State(num_particles, dim=3)
-    init_state.init_random((-10, 10), (-0, 0))
+    init_state.init_random((0, 10), (-10, 10))
     init_state.velocities -= init_state.center_of_mass()[1]
-    sim = md.Simulator(init_state, md.VerletIntegrator, dt, num_steps, lambda s: force_lennard_jones(s, np.inf))
+    sim = md.BoxedSimulator(init_state, md.VerletIntegrator, dt, num_steps, lambda s: force_lennard_jones(s, 2.5),
+                            10, 10, 10)
     vis = md.Visualizer(sim, inf_sim=True)
-    fig, ax, anim = vis.particle_cloud_animation(101, 1)
+    fig, ax, anim = vis.particle_cloud_animation(100, 1)
 
     plt.show()

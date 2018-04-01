@@ -132,13 +132,10 @@ class Simulator:
 
     def advance_state(self):
         """Advance to the next simulator state"""
+        next(self._integrator)
+        self._calc_state_vars()
         if self.save:
-            next(self._integrator)
-            self._calc_state_vars()
             self._states[self._step] = copy.deepcopy(self.state())
-        else:
-            next(self._integrator)
-            self._calc_state_vars()
 
     def reset(self):
         self._integrator.state = copy.deepcopy(self._init_state)
@@ -175,6 +172,41 @@ class Simulator:
     def _calc_state_vars(self) -> None:
         for state_func in self._state_functions:
             self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state())
+
+
+class BoxedSimulator(Simulator):
+
+    def __init__(self, init_state, integrator, time_step, num_steps, force_func, *constraints):
+        super().__init__(init_state, integrator, time_step, num_steps, force_func)
+        if not constraints:
+            raise ValueError("Constrains must not be None (did you mean to use a non-constrained simulator?)")
+        self._constraints = np.array(constraints)
+
+    def simulate(self):
+        """Perform the molecular dynamics simulation with the given parameters"""
+        if self.save:
+            for self._step, state in enumerate(self._integrator):
+                self._apply_constraints()
+                self._calc_state_vars()
+                self._states[self._step] = copy.deepcopy(state)
+            return self._integrator.state
+        for self._step, state in enumerate(self._integrator):
+            self._apply_constraints()
+            self._calc_state_vars()
+        return self._integrator.state()
+
+    def advance_state(self):
+        """Advance to the next simulator state"""
+        next(self._integrator)
+        self._apply_constraints()
+        self._calc_state_vars()
+        if self.save:
+            self._calc_state_vars()
+            self._states[self._step] = copy.deepcopy(self.state())
+
+    def _apply_constraints(self):
+        for dim in range(self._integrator.state.dim):
+            self._integrator.state.positions[dim, :] %= self._constraints[dim]
 
 
 class Visualizer:
