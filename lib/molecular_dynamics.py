@@ -1,6 +1,9 @@
 """Classes for use in the Molecular Dynamics project"""
 import copy
+import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import animation
 
 
 class State:
@@ -23,6 +26,10 @@ class State:
     def velocities(self) -> np.ndarray:
         """State positions getter"""
         return self._velocities
+
+    @property
+    def dim(self):
+        return self._dim
 
     @positions.setter
     def positions(self, new_pos) -> None:
@@ -115,7 +122,17 @@ class Simulator:
             return self._integrator.state
         for self._step, state in enumerate(self._integrator):
             self._calc_state_vars()
-        return self._integrator.state
+        return self._integrator.state()
+
+    def advance_state(self):
+        """Advance to the next simulator state"""
+        if self.save:
+            next(self._integrator)
+            self._calc_state_vars()
+            self._states[self._step] = copy.deepcopy(self.state())
+        else:
+            next(self._integrator)
+            self._calc_state_vars()
 
     def set_state_vars(self, *args) -> None:
         """
@@ -152,6 +169,40 @@ class Visualizer:
     """Class that provides various visualizations for a running simulation"""
     def __init__(self, simulator):
         self._simulator = simulator
+        self._points = None
 
-    def running_animation(self):
-        pass
+    @staticmethod
+    def plot_particle_cloud(state, *args):
+        if state.dim != 3:
+            raise ValueError("Cloud must be three-dimensional")
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        xs = state.positions[0, :]
+        ys = state.positions[1, :]
+        zs = state.positions[2, :]
+        ax.scatter(xs, ys, zs, *args)
+        return fig, ax
+
+    def particle_cloud_animation(self, num_frames, interval, *args):
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        xs = self._simulator.state().positions[0, :]
+        ys = self._simulator.state().positions[1, :]
+        zs = self._simulator.state().positions[2, :]
+        # initial scatter plot
+        self._points, = ax.plot(xs, ys, zs, 'o')
+
+        anim = animation.FuncAnimation(fig, self._update_cloud, frames=num_frames,
+                                       interval=interval, repeat=True)
+        return fig, ax, anim
+
+    def _update_cloud(self, i):
+        assert self._points is not None
+        self._simulator.advance_state()
+        xs = self._simulator.state().positions[0, :]
+        ys = self._simulator.state().positions[1, :]
+        zs = self._simulator.state().positions[2, :]
+        self._points.set_data(np.array([xs, ys]))
+        self._points.set_3d_properties(zs, 'z')
+        return self._points
+

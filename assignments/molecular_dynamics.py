@@ -1,7 +1,4 @@
 import math
-import itertools
-import numpy as np
-import matplotlib.pyplot as plt
 import lib.molecular_dynamics as md
 from decorators.decorators import *
 from matplotlib import rc
@@ -13,8 +10,17 @@ def save_figure(fname):
     plt.savefig('/home/jesse/Dropbox/Uni/Jaar 3/Computational physics/molecular_dynamics/'+fname+'.pdf', format='pdf')
 
 
-def force_coupled_sho(state):
+def force_coupled_sho(state) -> np.ndarray:
     return -2*state.positions + np.roll(state.positions, 1, axis=1) + np.roll(state.positions, -1, axis=1)
+
+
+def force_lennard_jones(state, cutoff) -> np.ndarray:
+    separation_mat = np.subtract.outer(state.positions, state.positions).diagonal(axis1=0, axis2=2)
+    dist_mat = np.sqrt((separation_mat**2).sum(axis=2))
+    dist_mat[dist_mat == 0] = np.inf
+    force_mat = -24*(2*dist_mat[:, :, np.newaxis]**-14 - dist_mat[:, :, np.newaxis]**-8)*separation_mat
+    force_mat[dist_mat > cutoff] = 0
+    return force_mat.sum(axis=1).T  # sum contributions from all particles, transpose to get same shape as state arrays
 
 
 def molecular_dynamics1a():
@@ -150,3 +156,19 @@ def molecular_dynamics1c():
 
     plt.show()
 
+
+def molecular_dynamics2d():
+    num_particles = 100
+    num_steps = 10000
+    dt = (10**-8/num_particles)**0.25
+    time = np.linspace(dt, dt*num_steps, num_steps)
+
+    init_state = md.State(num_particles, dim=3)
+    init_state.init_random((-10, 10), (-5, 5))
+    init_state.velocities -= init_state.center_of_mass()[1]
+    sim = md.Simulator(init_state, md.VerletIntegrator, dt, num_steps, lambda s: force_lennard_jones(s, 2.5))
+    sim.save = True
+    vis = md.Visualizer(sim)
+    fig, ax, anim = vis.particle_cloud_animation(100, 1)
+
+    plt.show()
