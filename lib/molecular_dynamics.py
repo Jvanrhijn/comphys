@@ -128,7 +128,7 @@ class Simulator:
             return self._integrator.state
         for self._step, state in enumerate(self._integrator):
             self._calc_state_vars()
-        return self._integrator.state()
+        return self._integrator.state
 
     def advance_state(self):
         """Advance to the next simulator state"""
@@ -171,7 +171,7 @@ class Simulator:
     # Private
     def _calc_state_vars(self) -> None:
         for state_func in self._state_functions:
-            self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state())
+            self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state)
 
 
 class BoxedSimulator(Simulator):
@@ -193,7 +193,7 @@ class BoxedSimulator(Simulator):
         for self._step, state in enumerate(self._integrator):
             self._apply_constraints()
             self._calc_state_vars()
-        return self._integrator.state()
+        return self._integrator.state
 
     def advance_state(self):
         """Advance to the next simulator state"""
@@ -214,6 +214,7 @@ class Visualizer:
     def __init__(self, simulator, inf_sim=False):
         self._simulator = simulator
         self._points = None
+        self._ax = None
         if inf_sim:
             if self._simulator.save:
                 raise ValueError("Cannot save states if continuing simulation indefinitely")
@@ -231,14 +232,22 @@ class Visualizer:
         ax.scatter(xs, ys, zs, *args)
         return fig, ax
 
-    def particle_cloud_animation(self, num_frames, interval, *args):
+    def particle_cloud_animation(self, num_frames, interval, *args, xaxis_bounds=None, yaxis_bounds=None,
+                                 zaxis_bounds=None):
         fig = plt.figure()
         ax = Axes3D(fig)
+        if xaxis_bounds:
+            ax.set_xlim(xaxis_bounds[0], xaxis_bounds[1])
+        if yaxis_bounds:
+            ax.set_ylim(yaxis_bounds[0], yaxis_bounds[1])
+        if zaxis_bounds:
+            ax.set_zlim(zaxis_bounds[0], zaxis_bounds[1])
+        self._ax = ax
         xs = self._simulator.state().positions[0, :]
         ys = self._simulator.state().positions[1, :]
         zs = self._simulator.state().positions[2, :]
         # initial scatter plot
-        self._points, = ax.plot(xs, ys, zs, 'o')
+        self._points, = ax.plot(xs, ys, zs, 'o', *args)
 
         anim = animation.FuncAnimation(fig, self._update_cloud, frames=num_frames,
                                        interval=interval, repeat=True)
