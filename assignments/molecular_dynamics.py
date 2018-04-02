@@ -15,17 +15,15 @@ def force_coupled_sho(state) -> np.ndarray:
 
 
 def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
-    forces_mat = np.zeros(state.positions.shape)
-    for i in range(state._num_particles):
-        shifted = (state.positions - state.positions[:, i] + np.array([0.5*box_side]*state.dim)) % box_side
-        separation_mat = np.subtract.outer(shifted, shifted).diagonal(axis1=0, axis2=2)
-        dist_mat = np.sqrt(separation_mat**2).sum(axis=2)
+    for i in range(state.positions.shape[1]):
+        shift_by = state.positions[:, i, np.newaxis] - np.array([0.5*box_side]*state.dim)[:, np.newaxis]
+        shifted = (state.positions - shift_by) % box_side
+        separation_mat = np.ones(state.positions.shape)*shifted[:, 0, np.newaxis] - shifted
+        dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
         dist_mat[dist_mat == 0] = np.inf
-        force_mat = -24*(2*dist_mat[:, :, np.newaxis]**-14 - dist_mat[:, :, np.newaxis]**-8)*separation_mat
-        force_mat[dist_mat > cutoff] = 0
-        force_mat.sum(axis=1)
-        forces_mat[:, i] = force_mat[i, :]
-    return forces_mat
+        force_mat = -24*(2*dist_mat**-14 - dist_mat**-8)*separation_mat
+        force_mat[:, dist_mat > cutoff] = 0
+    return force_mat
 
 
 def force_lennard_jones(state, cutoff) -> np.ndarray:
@@ -173,15 +171,12 @@ def molecular_dynamics1c():
 
 def molecular_dynamics2d():
     num_particles = 125
-    num_steps = 200
-    dt = (10**-16/num_steps)**0.25
+    num_steps = 100
+    dt = (10**-4/num_steps)**0.25
     time = np.linspace(dt, dt*num_steps, num_steps)
 
-    init_state = md.State(num_particles, dim=3)
-    init_state.init_random((0, 5), (0, 5))
-    init_state.velocities -= init_state.center_of_mass()[1]
-    sim = md.BoxedSimulator(init_state, md.VerletIntegrator, dt, num_steps,
-                            lambda s: force_lennard_jones_mic(s, 2.5, 5),
+    sim = md.BoxedSimulator(md.State(num_particles).init_random((0, 5), (0, 0)), md.VerletIntegrator, dt, num_steps,
+                            lambda s: force_lennard_jones_mic(s, 5, 5),
                             5, 5, 5)
     sim.set_state_vars(("Kinetic energy", lambda s: 0.5*np.sum(s.velocities**2)))
 
@@ -191,5 +186,4 @@ def molecular_dynamics2d():
                                                  xaxis_bounds=(0, 5),
                                                  yaxis_bounds=(0, 5),
                                                  zaxis_bounds=(0, 5))
-
     plt.show()
