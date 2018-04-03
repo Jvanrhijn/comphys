@@ -167,10 +167,10 @@ class Simulator:
         :param args: Tuples of names and the functions used to calculate the state variables
 
         Example usage:
-        simulator.state_vars(
-                            ("energy", lambda s: 0.5*(np.sum(s.velocities**2) + sum(s.positions**2)),
-                            ("pressure", lambda s: ...)
-                            )
+        simulator.set_state_vars(
+                                ("energy", lambda s: 0.5*(np.sum(s.velocities**2) + sum(s.positions**2)),
+                                ("pressure", lambda s: ...)
+                                )
         """
         for arg in args:
             self._state_vars[arg[0]] = np.zeros(self._num_steps)
@@ -240,6 +240,7 @@ class BoxedSimulator(Simulator):
             self._calc_state_vars()
             self._states[self._step] = copy.deepcopy(self.state())
 
+    # Private
     def _apply_constraints(self):
         for dim in range(self._integrator.state.dim):
             self._integrator.state.positions[dim, :] %= self._constraints[dim]
@@ -289,6 +290,7 @@ class Visualizer:
                                        interval=interval, repeat=True)
         return fig, ax, anim
 
+    # Private
     def _update_cloud(self, i):
         assert self._points is not None
         self._simulator.advance_state()
