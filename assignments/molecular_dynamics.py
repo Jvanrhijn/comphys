@@ -175,15 +175,18 @@ def molecular_dynamics2d():
     dt = (10**-4/num_steps)**0.25
     time = np.linspace(dt, dt*num_steps, num_steps)
 
-    sim = md.BoxedSimulator(md.State(num_particles).init_random((0, 5), (0, 0)), md.VerletIntegrator, dt, num_steps,
-                            lambda s: force_lennard_jones_mic(s, 5, 5),
-                            5, 5, 5)
-    sim.set_state_vars(("Kinetic energy", lambda s: 0.5*np.sum(s.velocities**2)))
+    box = md.Box(5, 5, 5)
+    force = lambda s: force_lennard_jones_mic(s, 2.5, box.side(0))
+    state = md.State(num_particles).init_random((0, 5), (0, 0))
+    state.init_grid(box)
 
+    sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps,
+                            force, box)
+    sim.set_state_vars(("Kinetic energy", lambda s: 0.5*np.sum(s.velocities**2)))
 
     vis = md.Visualizer(sim, inf_sim=True)
     fig, ax, anim = vis.particle_cloud_animation(100, 1,
-                                                 xaxis_bounds=(0, 5),
-                                                 yaxis_bounds=(0, 5),
-                                                 zaxis_bounds=(0, 5))
+                                                 xaxis_bounds=(0, box.side(0)),
+                                                 yaxis_bounds=(0, box.side(1)),
+                                                 zaxis_bounds=(0, box.side(2)))
     plt.show()

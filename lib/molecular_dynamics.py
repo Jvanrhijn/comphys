@@ -174,13 +174,31 @@ class Simulator:
             self._state_vars[state_func[0]][self._step] = state_func[1](self._integrator.state)
 
 
+class Box:
+    def __init__(self, *sides):
+        self._sides = sides
+
+    @property
+    def sides(self):
+        return self._sides
+
+    @property
+    def volume(self):
+        volume = 1
+        for side_length in self._sides:
+            volume *= side_length
+        return volume
+
+    def side(self, index):
+        return self._sides[index]
+
+
 class BoxedSimulator(Simulator):
 
-    def __init__(self, init_state, integrator, time_step, num_steps, force_func, *constraints):
+    def __init__(self, init_state, integrator, time_step, num_steps, force_func, box):
         super().__init__(init_state, integrator, time_step, num_steps, force_func)
-        if not constraints:
-            raise ValueError("Constrains must not be None (did you mean to use a non-constrained simulator?)")
-        self._constraints = np.array(constraints)
+        self._box = box
+        self._constraints = np.array(list(box.sides))
 
     def simulate(self):
         """Perform the molecular dynamics simulation with the given parameters"""
