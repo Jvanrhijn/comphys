@@ -24,8 +24,6 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
         dist_mat[dist_mat == 0] = np.inf
         dist_mat[dist_mat > cutoff] = np.inf
         force_mat[:, i] = (-24*(2*dist_mat**-14 - dist_mat**-8)*separation_mat).sum(axis=1)
-        #force_mat[:, dist_mat > cutoff] = 0
-    print(force_mat)
     return force_mat
 
 
@@ -33,7 +31,7 @@ def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
     for i in range(state.positions.shape[1]):
         shift_by = state.positions[:, i, np.newaxis] - np.array([0.5*box_side]*state.dim)[:, np.newaxis]
         shifted = (state.positions - shift_by) % box_side
-        separation_mat = np.ones(state.positions.shape)*shifted[:, 0, np.newaxis] - shifted
+        separation_mat = np.ones(state.positions.shape)*shifted[:, i, np.newaxis] - shifted
         dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
         dist_mat[dist_mat == 0] = np.inf
         pots = -4*(2*dist_mat**-12 - dist_mat**-6) + 4*(2*cutoff**-12 - cutoff**-6)
