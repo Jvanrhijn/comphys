@@ -26,6 +26,18 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
     return force_mat
 
 
+def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
+    for i in range(state.positions.shape[1]):
+        shift_by = state.positions[:, i, np.newaxis] - np.array([0.5*box_side]*state.dim)[:, np.newaxis]
+        shifted = (state.positions - shift_by) % box_side
+        separation_mat = np.ones(state.positions.shape)*shifted[:, 0, np.newaxis] - shifted
+        dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
+        dist_mat[dist_mat == 0] = np.inf
+        pots = -4*(2*dist_mat**-12 - dist_mat**-6) + 4*(2*cutoff**-12 - cutoff**-6)
+        pots[dist_mat > cutoff] = 0
+    return pots.sum()
+
+
 def force_lennard_jones(state, cutoff) -> np.ndarray:
     separation_mat = np.subtract.outer(state.positions, state.positions).diagonal(axis1=0, axis2=2)
     dist_mat = np.sqrt((separation_mat**2).sum(axis=2))
@@ -170,23 +182,34 @@ def molecular_dynamics1c():
 
 
 def molecular_dynamics2d():
+
     num_particles = 125
-    num_steps = 100
-    dt = (10**-4/num_steps)**0.25
-    time = np.linspace(dt, dt*num_steps, num_steps)
+    end_time = 1
+    dt = (10**-10/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
 
     box = md.Box(5, 5, 5)
     force = lambda s: force_lennard_jones_mic(s, 2.5, box.side(0))
-    state = md.State(num_particles).init_random((0, 5), (0, 0))
+    state = md.State(num_particles).init_random((0, 5), (-10, 10))
+    state.set_temperature(3)
+
     state.init_grid(box)
 
-    sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps,
-                            force, box)
-    sim.set_state_vars(("Kinetic energy", lambda s: 0.5*np.sum(s.velocities**2)))
+    sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps, force, box)
 
-    vis = md.Visualizer(sim, inf_sim=True)
-    fig, ax, anim = vis.particle_cloud_animation(100, 1,
-                                                 xaxis_bounds=(0, box.side(0)),
-                                                 yaxis_bounds=(0, box.side(1)),
-                                                 zaxis_bounds=(0, box.side(2)))
+    potential = lambda s: potential_energy_lennard_jones_mic(s, 2.5, box.side(0))
+
+    sim.set_state_vars(("Temperature", lambda s: s.temperature()),
+                       ("Kinetic", lambda s: s.kinetic_energy()),
+                       ("Potential", lambda s: potential(s)))
+
+    #vis = md.Visualizer(sim, inf_sim=True)
+    #fig, ax, anim = vis.particle_cloud_animation(100, 1,
+    #                                             xaxis_bounds=(0, box.side(0)),
+    #                                             yaxis_bounds=(0, box.side(1)),
+    #                                             zaxis_bounds=(0, box.side(2)))
+    sim.simulate()
+    plt.figure()
+    plt.plot(time, sim.state_vars["Kinetic"] + sim.state_vars["Potential"])
     plt.show()

@@ -45,6 +45,16 @@ class State:
             raise ValueError("New velocities must be of shape " + str(self._velocities.shape))
         self._velocities = new_vel
 
+    def kinetic_energy(self) -> float:
+        return 0.5*np.sum(self._velocities**2)
+
+    def temperature(self) -> float:
+        return 2*self.kinetic_energy()/self._num_particles
+
+    def set_temperature(self, new_temp) -> None:
+        scale_factor = np.sqrt(new_temp/self.temperature())
+        self.velocities *= scale_factor
+
     def get_single_particle(self, num):
         state = State(1, dim=self._dim)
         state.positions = np.reshape(self.positions[:, num], (self._dim, 1))
@@ -63,6 +73,13 @@ class State:
         self._velocities = np.random.random(size=(self._dim, self._num_particles))\
             * (velocity_range[1] - velocity_range[0]) + velocity_range[0]
         return self
+
+    def init_grid(self, box):
+        offset = 0.5
+        x, y, z = np.meshgrid(np.arange(offset, box.side(0)+offset), np.arange(offset, box.side(1)+offset),
+                              np.arange(offset, box.side(2)+offset))
+        for p in range(self._num_particles):
+            self._positions[:, p] = np.array([x.flatten()[p], y.flatten()[p], z.flatten()[p]])
 
     def center_of_mass(self) -> tuple:
         """Calculate the center of mass of the collection of particles and its velocity vector"""
