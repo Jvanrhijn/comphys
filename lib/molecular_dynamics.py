@@ -1,9 +1,10 @@
 """Classes for use in the Molecular Dynamics project"""
 import copy
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
+from tqdm import tqdm
 
 
 class State:
@@ -139,11 +140,11 @@ class Simulator:
     def simulate(self):
         """Perform the molecular dynamics simulation with the given parameters"""
         if self.save:
-            for self._step, state in enumerate(self._integrator):
+            for self._step, state in enumerate(tqdm(self._integrator, total=self._num_steps)):
                 self._calc_state_vars()
                 self._states[self._step] = copy.deepcopy(state)
             return self._integrator.state
-        for self._step, state in enumerate(self._integrator):
+        for self._step, state in enumerate(tqdm(self._integrator, total=self._num_steps)):
             self._calc_state_vars()
         return self._integrator.state
 
@@ -220,12 +221,12 @@ class BoxedSimulator(Simulator):
     def simulate(self):
         """Perform the molecular dynamics simulation with the given parameters"""
         if self.save:
-            for self._step, state in enumerate(self._integrator):
+            for self._step, state in enumerate(tqdm(self._integrator, total=self._num_steps)):
                 self._apply_constraints()
                 self._calc_state_vars()
                 self._states[self._step] = copy.deepcopy(state)
             return self._integrator.state
-        for self._step, state in enumerate(self._integrator):
+        for self._step, state in enumerate(tqdm(self._integrator, total=self._num_steps)):
             self._apply_constraints()
             self._calc_state_vars()
         return self._integrator.state
