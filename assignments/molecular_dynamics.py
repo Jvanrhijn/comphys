@@ -31,7 +31,7 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
     force_mat = (24*(2/dist_mat**14 - 1/dist_mat**8)[:, :, np.newaxis]*separation_mat)
     force = force_mat.sum(axis=1).T
     # Compute state variables
-    potential_energy = 4*(1/dist_mat**12 - 1/dist_mat**6) - 4*(1/cutoff**12 - 1/cutoff**6)
+    potential_energy = 0.5*(4*(1/dist_mat**12 - 1/dist_mat**6) - 4*(1/cutoff**12 - 1/cutoff**6))
     state.potential_energy = potential_energy.sum()
     pressure = 0.5*(force_mat*separation_mat).sum()/(3*box_side**3) #  Factor 1/2 to compensate for double-counting
     state.pressure = pressure
@@ -174,9 +174,9 @@ def molecular_dynamics_1_1c():
 
 def molecular_dynamics_1_2d():
 
-    num_particles = 512
-    end_time = 1
-    dt = (10**-8/end_time)**(1/3)
+    num_particles = 125
+    end_time = 10
+    dt = (10**-7/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
 
