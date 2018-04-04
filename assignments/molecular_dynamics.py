@@ -2,6 +2,7 @@ import math
 import lib.molecular_dynamics as md
 from decorators.decorators import *
 from matplotlib import rc
+from matplotlib import cm
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 20})
 rc('text', usetex=True)
 
@@ -37,18 +38,9 @@ def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
         dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
         dist_mat[dist_mat == 0] = np.inf
         dist_mat[dist_mat > cutoff] = np.inf
-        pots = 4*(2*dist_mat**-12 - dist_mat**-6) - 4*(2*cutoff**-12 - cutoff**-6)
+        pots = 4*(dist_mat**-12 - dist_mat**-6) - 4*(cutoff**-12 - cutoff**-6)
         pot_energy[i] = pots.sum()
     return pot_energy.sum()
-
-
-def force_lennard_jones(state, cutoff) -> np.ndarray:
-    separation_mat = np.subtract.outer(state.positions, state.positions).diagonal(axis1=0, axis2=2)
-    dist_mat = np.sqrt((separation_mat**2).sum(axis=2))
-    dist_mat[dist_mat == 0] = np.inf
-    force_mat = -24*(2*dist_mat[:, :, np.newaxis]**-14 - dist_mat[:, :, np.newaxis]**-8)*separation_mat
-    force_mat[dist_mat > cutoff] = 0
-    return force_mat.sum(axis=1).T  # sum contributions from all particles, transpose to get same shape as state arrays
 
 
 def molecular_dynamics1a():
@@ -188,8 +180,8 @@ def molecular_dynamics1c():
 def molecular_dynamics2d():
 
     num_particles = 125
-    end_time = 10
-    dt = (10**-10/end_time)**(1/3)
+    end_time = 1
+    dt = (10**-8/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
 
@@ -197,24 +189,25 @@ def molecular_dynamics2d():
 
     state = md.State(num_particles).init_random((0, box.side(0)), (0, 10))
     state.velocities -= state.center_of_mass()[1]
-    state.set_temperature(300)
+    state.set_temperature(3)
     state.init_grid(box)
 
     potential = lambda s: potential_energy_lennard_jones_mic(s, 2.5, box.side(0))
     force = lambda s: force_lennard_jones_mic(s, 2.5, box.side(0))
+
     sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps, force, box)
     sim.set_state_vars(("Temperature", lambda s: s.temperature()),
                        ("Kinetic", lambda s: s.kinetic_energy()),
                        ("Potential", potential))
 
-    vis = md.Visualizer(sim, inf_sim=True)
-    fig, ax, anim = vis.particle_cloud_animation(100, 1,
-                                                 xaxis_bounds=(0, box.side(0)),
-                                                 yaxis_bounds=(0, box.side(1)),
-                                                 zaxis_bounds=(0, box.side(2)))
-    #sim.simulate()
-    #energy_start = (sim.state_vars["Kinetic"] + sim.state_vars["Potential"])[0]
-    #plt.figure()
-    ##plt.plot(time, (sim.state_vars["Kinetic"] + sim.state_vars["Potential"] - energy_start)/energy_start)
+    #vis = md.Visualizer(sim, inf_sim=True)
+    #fig, ax, anim = vis.particle_cloud_animation(100, 1,
+    #                                             xaxis_bounds=(0, box.side(0)),
+    #                                             yaxis_bounds=(0, box.side(1)),
+    #                                             zaxis_bounds=(0, box.side(2)))
+    sim.simulate()
+    energy_start = (sim.state_vars["Kinetic"] + sim.state_vars["Potential"])[0]
+    plt.figure()
+    plt.plot(time, (sim.state_vars["Kinetic"] + sim.state_vars["Potential"] - energy_start)/energy_start)
     #plt.plot(time, sim.state_vars["Temperature"])
     plt.show()

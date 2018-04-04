@@ -273,7 +273,7 @@ class Visualizer:
         return fig, ax
 
     def particle_cloud_animation(self, num_frames, interval, *args, xaxis_bounds=None, yaxis_bounds=None,
-                                 zaxis_bounds=None):
+                                 zaxis_bounds=None, **kwargs):
         fig = plt.figure()
         ax = Axes3D(fig)
         if xaxis_bounds:
@@ -287,7 +287,7 @@ class Visualizer:
         ys = self._simulator.state().positions[1, :]
         zs = self._simulator.state().positions[2, :]
         # initial scatter plot
-        self._points, = ax.plot(xs, ys, zs, 'o', *args)
+        self._points, = ax.plot(xs, ys, zs, 'o', *args, **kwargs)
 
         anim = animation.FuncAnimation(fig, self._update_cloud, num_frames,
                                        interval=interval, repeat=True, blit=True)
