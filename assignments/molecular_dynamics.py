@@ -38,12 +38,12 @@ def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
         dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
         dist_mat[dist_mat == 0] = np.inf
         dist_mat[dist_mat > cutoff] = np.inf
-        pots = 4*(dist_mat**-12 - dist_mat**-6) - 4*(cutoff**-12 - cutoff**-6)
+        pots = 0.5*(4*(dist_mat**-12 - dist_mat**-6) - 4*(cutoff**-12 - cutoff**-6))  # Factor 0.5 for double counting
         pot_energy[i] = pots.sum()
     return pot_energy.sum()
 
 
-def molecular_dynamics1a():
+def molecular_dynamics_1_1a():
     dt = 2*((5*10**-3)/(8*np.pi))**(1/3)
     num_steps = int(math.ceil(8*np.pi/dt))
     init_state = md.State(1, dim=1)
@@ -82,7 +82,7 @@ def molecular_dynamics1a():
     plt.show()
 
 
-def molecular_dynamics1b():
+def molecular_dynamics_1_1b():
     dt = ((5*10**-3)/(4*np.pi))**(1/3)
     num_steps = int(math.ceil(4*np.pi/dt))
     time = np.linspace(dt, num_steps*dt, num_steps)
@@ -110,7 +110,7 @@ def molecular_dynamics1b():
     plt.show()
 
 
-def molecular_dynamics1c():
+def molecular_dynamics_1_1c():
     dt = ((10**-4)/(8*np.pi))**(1/3)
     num_steps = int(math.ceil(8*np.pi/dt))
     time = np.linspace(dt, num_steps*dt, num_steps)
@@ -177,15 +177,18 @@ def molecular_dynamics1c():
     plt.show()
 
 
-def molecular_dynamics2d():
+def molecular_dynamics_1_2d():
 
     num_particles = 125
-    end_time = 1
-    dt = (10**-8/end_time)**(1/3)
+    end_time = 10
+    dt = (10**-6/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
 
-    box = md.Box(5.5, 5.5, 5.5)
+    density = 0.75
+    box_side = (num_particles/density)**(1/3)
+
+    box = md.Box(box_side, box_side, box_side)
 
     state = md.State(num_particles).init_random((0, box.side(0)), (0, 10))
     state.velocities -= state.center_of_mass()[1]
@@ -199,15 +202,101 @@ def molecular_dynamics2d():
     sim.set_state_vars(("Temperature", lambda s: s.temperature()),
                        ("Kinetic", lambda s: s.kinetic_energy()),
                        ("Potential", potential))
-
-    #vis = md.Visualizer(sim, inf_sim=True)
-    #fig, ax, anim = vis.particle_cloud_animation(100, 1,
-    #                                             xaxis_bounds=(0, box.side(0)),
-    #                                             yaxis_bounds=(0, box.side(1)),
-    #                                             zaxis_bounds=(0, box.side(2)))
+    sim.save = True
     sim.simulate()
-    energy_start = (sim.state_vars["Kinetic"] + sim.state_vars["Potential"])[0]
-    plt.figure()
-    plt.plot(time, (sim.state_vars["Kinetic"] + sim.state_vars["Potential"] - energy_start)/energy_start)
-    #plt.plot(time, sim.state_vars["Temperature"])
+
+    kinetic, potential = sim.state_vars["Kinetic"], sim.state_vars["Potential"]
+    energy = kinetic + potential
+    energy_start = energy[0]
+    temperature = sim.state_vars["Temperature"]
+
+    fig, ax = plt.subplots(1, 3, figsize=(20, 5))
+    ax[0].plot(time, (energy - energy_start)/energy_start)
+    ax[1].plot(time, kinetic, label="Kinetic"), ax[1].plot(time, potential, label="Potential"), \
+    ax[1].plot(time, energy, label="Total"), ax[1].legend()
+    ax[2].plot(time, temperature)
+
+    ax[0].set_ylabel(r"$(E(t) - E_0)/E_0"), ax[1].set_ylabel(r"Energy"), ax[2].set_ylabel(r"$T(t)$")
+    for axis in ax:
+        axis.set_xlabel(r"$t$")
+        axis.grid()
+    fig.tight_layout()
+    save_figure("2d_ii")
+
+    equilibration = len(time)//10
+    temp = np.mean(temperature[equilibration:])
+    print("Temperature T = {}".format(round(temp, 2)))
+
+    speeds = np.array(list(itertools.chain.from_iterable(
+        np.array([abs(state.velocities[0, :]) for state in sim.states][equilibration:]))))
+    fig, ax = plt.subplots(1, figsize=(20, 5))
+    ax.hist(speeds, bins=50, normed=True)
+    boltzmann = np.exp(-np.sort(speeds)**2/(2*temp))  # Factor 3 in temp/3 needed to account for single-dimension
+    boltzmann /= np.trapz(boltzmann, np.sort(speeds))
+    ax.plot(np.sort(speeds), boltzmann,
+            label=r"Boltzmann")  # must sort speeds to prevent crash, probably bug in matplotlib
+    ax.set_xlabel(r"$|v_x|$"), ax.legend()
+    save_figure("2d_iii")
+
     plt.show()
+
+
+def molecular_dynamics_2_1():
+    num_particles = 125
+    density = 0.75
+    temp_init = 2
+    box_side = (num_particles/density)**(1/3)
+    box = md.Box(box_side, box_side, box_side)
+    cutoff = 2.5
+
+    end_time = 10
+    dt = (10**-6/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
+
+    state = md.State(num_particles).init_random((0, box_side), (0, 10))
+    state.init_grid(box)
+    state.velocities -= state.center_of_mass()[1]
+    state.set_temperature(temp_init)
+
+    for _ in range(5):
+        sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps,
+                            lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
+                            box)
+        sim.set_state_vars(("Temperature", lambda s: s.temperature()))
+        sim.simulate()
+
+        equilibration = len(time)//10
+        temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
+        print("\nTemperature: T = {}\n".format(round(temperature, 2)))
+
+
+def molecular_dynamics_2_2():
+    num_particles = 125
+    density = 0.75
+    temp_init = 2
+    box_side = (num_particles/density)**(1/3)
+    box = md.Box(box_side, box_side, box_side)
+    cutoff = 2.5
+
+    end_time = 10
+    dt = (10**-6/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
+    num_prep_steps = num_steps//3
+
+    state = md.State(num_particles).init_random((0, box_side), (0, 10))
+    state.init_grid(box)
+    state.velocities -= state.center_of_mass()[1]
+    state.set_temperature(temp_init)
+
+    sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
+                               lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
+                               box, temp_init, num_prep_steps)
+    sim.set_state_vars(("Temperature", lambda s: s.temperature()))
+    sim.simulate()
+
+    equilibration = len(time)//10 + num_prep_steps
+    temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
+    print("\nTemperature: T = {}\n".format(round(temperature, 2)))
+

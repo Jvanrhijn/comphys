@@ -51,7 +51,7 @@ class State:
         return 0.5*np.sum(self._velocities**2)
 
     def temperature(self) -> float:
-        return 2*self.kinetic_energy()/self._num_particles
+        return 2*self.kinetic_energy()/(self._num_particles*self._dim)
 
     def set_temperature(self, new_temp) -> None:
         scale_factor = np.sqrt(new_temp/self.temperature())
@@ -84,6 +84,7 @@ class State:
                               np.linspace(offset, box.side(2)-offset, p_per_side))
         for p in range(self._num_particles):
             self._positions[:, p] = np.array([x.flatten()[p], y.flatten()[p], z.flatten()[p]])
+        return self
 
     def center_of_mass(self) -> tuple:
         """Calculate the center of mass of the collection of particles and its velocity vector"""
@@ -127,6 +128,7 @@ class Simulator:
     """Molecular dynamics simulator class"""
     def __init__(self, init_state, integrator, time_step, num_steps, force_function):
         self._integrator = integrator(init_state, force_function, time_step, max_steps=num_steps)
+        self._init_integrator = copy.deepcopy(integrator)
         self._num_steps = num_steps
         self._end_time = num_steps*time_step
         self._state_vars = {}
@@ -157,12 +159,6 @@ class Simulator:
         self._calc_state_vars()
         if self.save:
             self._states[self._step] = copy.deepcopy(self.state())
-
-    def reset(self):
-        self._integrator.state = copy.deepcopy(self._init_state)
-        for key in self._state_vars:
-            self._state_vars[key] = np.zeros(self._num_steps)
-        self._states = np.zeros(self._num_steps, dtype=State)
 
     def set_state_vars(self, *args) -> None:
         """
@@ -247,6 +243,40 @@ class BoxedSimulator(Simulator):
     def _apply_constraints(self):
         for dim in range(self._integrator.state.dim):
             self._integrator.state.positions[dim, :] %= self._constraints[dim]
+
+
+class BoxedNVESimulator(BoxedSimulator):
+
+    def __init__(self, init_state, integrator, time_step, num_steps, force_func, box, temp_target, prep_steps):
+        super().__init__(init_state, integrator, time_step, num_steps, force_func, box)
+        self._temp_target = temp_target
+        self._prep_steps = prep_steps
+
+    def simulate(self):
+        """Perform the molecular dynamics simulation with the given parameters"""
+        if self.save:
+            for self._step in tqdm(range(self._prep_steps)):
+                next(self._integrator)
+                self._integrator.state.set_temperature(self._temp_target)
+                self._apply_constraints()
+                self._calc_state_vars()
+                self._states[self._step] = copy.deepcopy(self._integrator.state)
+            for self._step in tqdm(range(self._prep_steps, self._num_steps)):
+                next(self._integrator)
+                self._apply_constraints()
+                self._calc_state_vars()
+                self._states[self._step] = copy.deepcopy(self._integrator.state)
+            return self._integrator.state
+        for self._step in tqdm(range(self._prep_steps)):
+            next(self._integrator)
+            self._integrator.state.set_temperature(self._temp_target)
+            self._apply_constraints()
+            self._calc_state_vars()
+        for self._step in tqdm(range(self._prep_steps, self._num_steps)):
+            next(self._integrator)
+            self._apply_constraints()
+            self._calc_state_vars()
+        return self._integrator.state
 
 
 class Visualizer:
