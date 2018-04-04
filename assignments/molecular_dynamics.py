@@ -23,11 +23,12 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
         dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
         dist_mat[dist_mat == 0] = np.inf
         dist_mat[dist_mat > cutoff] = np.inf
-        force_mat[:, i] = (-24*(2/dist_mat**14 - 1/dist_mat**8)*separation_mat).sum(axis=1)
+        force_mat[:, i] = -(-24*(2/dist_mat**14 - 1/dist_mat**8)*separation_mat).sum(axis=1)
     return force_mat
 
 
 def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
+    pot_energy = np.zeros(state.positions.shape[1])
     for i in range(state.positions.shape[1]):
         shift_by = state.positions[:, i, np.newaxis] - np.array([0.5*box_side]*state.dim)[:, np.newaxis]
         shifted = (state.positions - shift_by) % box_side
@@ -36,7 +37,8 @@ def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
         dist_mat[dist_mat == 0] = np.inf
         dist_mat[dist_mat > cutoff] = np.inf
         pots = -4*(2*dist_mat**-12 - dist_mat**-6) + 4*(2*cutoff**-12 - cutoff**-6)
-    return pots.sum()
+        pot_energy[i] = pots.sum()
+    return pot_energy.sum()
 
 
 def force_lennard_jones(state, cutoff) -> np.ndarray:
@@ -128,7 +130,7 @@ def molecular_dynamics1c():
         init_state = md.State(num_particles, dim=1).init_random(pos_range, vel_range)
         sim = md.Simulator(init_state, md.VerletIntegrator, dt, num_steps, force_coupled_sho)
         sim.state().velocities -= sim.state().center_of_mass()[1]  # Subtract translation mode
-        sim.set_state_vars(("Kinetic energy", lambda s: 0.5*np.sum(s.velocities**2)),
+        sim.set_state_vars(("Kinetic energy", lambda s: s.kinetic_energy()),
                            ("Potential energy", lambda s: 0.5*np.sum((np.roll(s.positions, 1, axis=1)
                                                                       - s.positions)**2)))
         sim.simulate()
@@ -152,7 +154,7 @@ def molecular_dynamics1c():
     sim = md.Simulator(md.State(num_particles, dim=1).init_random((-1, 1), (-1, 1)), md.VerletIntegrator,
                        dt, num_steps, force_coupled_sho)
     sim.state().velocities -= sim.state().center_of_mass()[1]
-    sim.set_state_vars(("Temperature", lambda s: np.sum(s.velocities**2)/num_particles))
+    sim.set_state_vars(("Temperature", lambda s: s.temperature()))
     sim.save = True
     sim.simulate()
 
@@ -187,6 +189,7 @@ def molecular_dynamics2d():
     num_particles = 125
     end_time = 1
     dt = (10**-8/end_time)**(1/3)
+    print(dt)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
 
@@ -197,9 +200,8 @@ def molecular_dynamics2d():
     state.set_temperature(3)
     state.init_grid(box)
 
-    potential = lambda s: potential_energy_lennard_jones_mic(s, 2.5, box.side(0))
+    potential = lambda s: potential_energy_lennard_jones_mic(s, np.inf, box.side(0))
     force = lambda s: force_lennard_jones_mic(s, 2.5, box.side(0))
-
     sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps, force, box)
     sim.set_state_vars(("Temperature", lambda s: s.temperature()),
                        ("Kinetic", lambda s: s.kinetic_energy()),
@@ -211,6 +213,7 @@ def molecular_dynamics2d():
                                                  yaxis_bounds=(0, box.side(1)),
                                                  zaxis_bounds=(0, box.side(2)))
     #sim.simulate()
+    #energy_start = (sim.state_vars["Kinetic"] + sim.state_vars["Potential"])[0]
     #plt.figure()
-    #plt.plot(time, sim.state_vars["Kinetic"] + sim.state_vars["Potential"])
+    #plt.plot(time, (sim.state_vars["Kinetic"] + sim.state_vars["Potential"] - energy_start)/energy_start)
     plt.show()

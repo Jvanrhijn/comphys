@@ -1,6 +1,7 @@
 """Classes for use in the Molecular Dynamics project"""
 import copy
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
@@ -77,8 +78,10 @@ class State:
 
     def init_grid(self, box):
         offset = 0.5
-        x, y, z = np.meshgrid(np.arange(offset, box.side(0)+offset), np.arange(offset, box.side(1)+offset),
-                              np.arange(offset, box.side(2)+offset))
+        p_per_side = math.ceil(self._num_particles**(1/3))
+        x, y, z = np.meshgrid(np.linspace(offset, box.side(0)-offset, p_per_side),
+                              np.linspace(offset, box.side(1)-offset, p_per_side),
+                              np.linspace(offset, box.side(2)-offset, p_per_side))
         for p in range(self._num_particles):
             self._positions[:, p] = np.array([x.flatten()[p], y.flatten()[p], z.flatten()[p]])
 
