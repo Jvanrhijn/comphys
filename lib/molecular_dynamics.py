@@ -1,11 +1,12 @@
 """Classes for use in the Molecular Dynamics project"""
 import copy
-import numpy as np
 import math
+import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import animation
-from tqdm import tqdm
+#from tqdm import tqdm
+tqdm = lambda *i, **kwargs: i[0]
 
 
 class State:
@@ -18,6 +19,8 @@ class State:
         self._num_particles = num_particles
         self._positions = np.zeros((dim, num_particles), dtype=float)
         self._velocities = np.zeros((dim, num_particles), dtype=float)
+        self._potential_energy = 0
+        self._pressure = 0
 
     @property
     def positions(self) -> np.ndarray:
@@ -32,6 +35,27 @@ class State:
     @property
     def dim(self):
         return self._dim
+
+    @property
+    def num_particles(self):
+        return self._num_particles
+
+    @property
+    def potential_energy(self) -> float:
+        """Return potential energy of gas, set by external simulator"""
+        return self._potential_energy
+
+    @potential_energy.setter
+    def potential_energy(self, new_pe):
+        self._potential_energy = new_pe
+
+    @property
+    def pressure(self) -> float:
+        return self._pressure
+
+    @pressure.setter
+    def pressure(self, new_p):
+        self._pressure = new_p
 
     @positions.setter
     def positions(self, new_pos) -> None:
@@ -111,6 +135,7 @@ class VerletIntegrator:
         half_velocity = self._state.velocities + 0.5*self._forces(self._state)*self._time_step
         self._state.positions += half_velocity*self._time_step
         self._state.velocities = half_velocity + 0.5*self._forces(self._state)*self._time_step
+
         self._step += 1
         return self._state
 
@@ -320,7 +345,7 @@ class Visualizer:
         self._points, = ax.plot(xs, ys, zs, 'o', *args, **kwargs)
 
         anim = animation.FuncAnimation(fig, self._update_cloud, num_frames,
-                                       interval=interval, repeat=True, blit=True)
+                                       interval=interval, repeat=True)
         return fig, ax, anim
 
     # Private

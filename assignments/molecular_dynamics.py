@@ -1,6 +1,7 @@
 import math
 import lib.molecular_dynamics as md
 from decorators.decorators import *
+from tqdm import tqdm
 from matplotlib import rc
 from matplotlib import cm
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 20})
@@ -17,30 +18,24 @@ def force_coupled_sho(state) -> np.ndarray:
 
 def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
     """Lennard-Jones force between all particles in state, for a cubic box"""
-    force_mat = np.zeros(state.positions.shape)
-    for i in range(state.positions.shape[1]):
-        shift_by = state.positions[:, i, np.newaxis] - np.array([0.5*box_side]*state.dim)[:, np.newaxis]
-        shifted = (state.positions - shift_by) % box_side
-        separation_mat = np.ones(state.positions.shape)*shifted[:, i, np.newaxis] - shifted
-        dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
-        dist_mat[dist_mat == 0] = np.inf
-        dist_mat[dist_mat > cutoff] = np.inf
-        force_mat[:, i] = (24*(2/dist_mat**14 - 1/dist_mat**8)*separation_mat).sum(axis=1)
-    return force_mat
-
-
-def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
-    pot_energy = np.zeros(state.positions.shape[1])
-    for i in range(state.positions.shape[1]):
-        shift_by = state.positions[:, i, np.newaxis] - np.array([0.5*box_side]*state.dim)[:, np.newaxis]
-        shifted = (state.positions - shift_by) % box_side
-        separation_mat = np.ones(state.positions.shape)*shifted[:, i, np.newaxis] - shifted
-        dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
-        dist_mat[dist_mat == 0] = np.inf
-        dist_mat[dist_mat > cutoff] = np.inf
-        pots = 0.5*(4*(dist_mat**-12 - dist_mat**-6) - 4*(cutoff**-12 - cutoff**-6))  # Factor 0.5 for double counting
-        pot_energy[i] = pots.sum()
-    return pot_energy.sum()
+    center = 0.5*box_side
+    # Apply mimimal image criterion
+    shift_by = state.positions - np.array([center]*state.dim)[:, np.newaxis]
+    shifted = (state.positions[:, :, np.newaxis] - shift_by[:, np.newaxis, :]).T % box_side
+    separation_mat = np.ones(shifted.shape)*center - shifted
+    dist_mat = np.linalg.norm(separation_mat, axis=2)
+    # Kill self-interaction and apply cutoff radius
+    np.fill_diagonal(dist_mat, np.inf)
+    np.where(dist_mat > cutoff, np.inf, dist_mat)
+    # Calculate f_ij and F_i
+    force_mat = (24*(2/dist_mat**14 - 1/dist_mat**8)[:, :, np.newaxis]*separation_mat)
+    force = force_mat.sum(axis=1).T
+    # Compute state variables
+    potential_energy = 4*(1/dist_mat**12 - 1/dist_mat**6) - 4*(1/cutoff**12 - 1/cutoff**6)
+    state.potential_energy = potential_energy.sum()
+    pressure = 0.5*(force_mat*separation_mat).sum()/(3*box_side**3) #  Factor 1/2 to compensate for double-counting
+    state.pressure = pressure
+    return force
 
 
 def molecular_dynamics_1_1a():
@@ -51,7 +46,7 @@ def molecular_dynamics_1_1a():
 
     sim = md.Simulator(init_state, md.VerletIntegrator, dt, num_steps, lambda s: -s.positions)
     sim.save = True
-    sim.set_state_vars(("Kinetic energy", lambda s: 0.5*(np.sum(s.velocities**2))),
+    sim.set_state_vars(("Kinetic energy", lambda s: s.kinetic_energy()),
                        ("Potential energy", lambda s: 0.5*np.sum(s.positions**2)))
     sim.simulate()
 
@@ -94,7 +89,7 @@ def molecular_dynamics_1_1b():
         sim = md.Simulator(md.State(100, dim=1).init_random(pos_range, vel_range),
                            md.VerletIntegrator, dt, num_steps, lambda s: -s.positions)
 
-        sim.set_state_vars(("Kinetic energy", lambda s: 0.5*(np.sum(s.velocities**2))),
+        sim.set_state_vars(("Kinetic energy", lambda s: s.kinetic_energy()),
                            ("Potential energy", lambda s: 0.5*np.sum(s.positions**2)))
         sim.simulate()
         ax[idx].set_title(r"$x \in {0}$, $v \in {1}".format(
@@ -179,9 +174,9 @@ def molecular_dynamics_1_1c():
 
 def molecular_dynamics_1_2d():
 
-    num_particles = 125
-    end_time = 10
-    dt = (10**-6/end_time)**(1/3)
+    num_particles = 512
+    end_time = 1
+    dt = (10**-8/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
 
@@ -195,13 +190,23 @@ def molecular_dynamics_1_2d():
     state.set_temperature(3)
     state.init_grid(box)
 
-    potential = lambda s: potential_energy_lennard_jones_mic(s, 2.5, box.side(0))
     force = lambda s: force_lennard_jones_mic(s, 2.5, box.side(0))
 
     sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps, force, box)
     sim.set_state_vars(("Temperature", lambda s: s.temperature()),
                        ("Kinetic", lambda s: s.kinetic_energy()),
-                       ("Potential", potential))
+                       ("Potential", lambda s: s.potential_energy))
+
+
+    """
+    vis = md.Visualizer(sim, inf_sim=True)
+    fig, ax, ani = vis.particle_cloud_animation(100, 1,
+                                                xaxis_bounds=(0, box_side),
+                                                yaxis_bounds=(0, box_side),
+                                                zaxis_bounds=(0, box_side))
+    plt.show()
+    """
+
     sim.save = True
     sim.simulate()
 
@@ -268,13 +273,12 @@ def molecular_dynamics_2_1():
 
         equilibration = len(time)//10
         temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
-        print("\nTemperature: T = {}\n".format(round(temperature, 2)))
+        print("\nTemperature: T = {:.2f}\n".format(temperature, 2))
 
 
 def molecular_dynamics_2_2():
     num_particles = 125
-    density = 0.75
-    temp_init = 2
+    density = 0.7
     box_side = (num_particles/density)**(1/3)
     box = md.Box(box_side, box_side, box_side)
     cutoff = 2.5
@@ -283,20 +287,147 @@ def molecular_dynamics_2_2():
     dt = (10**-6/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
-    num_prep_steps = num_steps//3
+    num_prep_steps = num_steps//4
+
+    for temp_init in [2.0, 0.9]:
+        state = md.State(num_particles).init_random((0, box_side), (0, 10))
+        state.init_grid(box)
+        state.velocities -= state.center_of_mass()[1]
+        state.set_temperature(temp_init)
+        sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
+                                   lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
+                                   box, temp_init, num_prep_steps)
+        sim.set_state_vars(("Temperature", lambda s: s.temperature()))
+        sim.simulate()
+        equilibration = len(time)//10 + num_prep_steps
+        temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
+
+        print("\nTemperature: T = {:.2f}\n".format(temperature))
+
+
+def molecular_dynamics_2_3a():
+    num_particles = 125
+    density = 0.8
+    box_side = (num_particles/density)**(1/3)
+    box = md.Box(box_side, box_side, box_side)
+    init_temp = 2
+    cutoff = 2.5
+
+    end_time = 1
+    dt = (10**-8/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
+    num_prep_steps = num_steps//4
 
     state = md.State(num_particles).init_random((0, box_side), (0, 10))
     state.init_grid(box)
     state.velocities -= state.center_of_mass()[1]
-    state.set_temperature(temp_init)
+    state.set_temperature(init_temp)
 
     sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
                                lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
-                               box, temp_init, num_prep_steps)
-    sim.set_state_vars(("Temperature", lambda s: s.temperature()))
+                               box, init_temp, num_prep_steps)
+    sim.set_state_vars(("Pressure", lambda s: pressure_dev(s, cutoff, box)),
+                       ("Temperature", lambda s: s.temperature()))
     sim.simulate()
 
     equilibration = len(time)//10 + num_prep_steps
     temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
-    print("\nTemperature: T = {}\n".format(round(temperature, 2)))
+
+    pressure = np.mean(sim.state_vars["Pressure"][equilibration:]) + density*temperature
+
+    print("\nPressure: P = {0:.2f}\nIdeal gas law: P = {1:.2f}\nDeviation: {2:.2f}".format(pressure, density*temperature,
+          pressure - density*temperature))
+
+
+def molecular_dynamics_2_3b():
+    num_particles = 125
+    densities = np.linspace(.01, 0.8, 40)
+    init_temp = 2
+    cutoff = 2.5
+
+    end_time = 1
+    dt = (10**-6/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
+    num_prep_steps = num_steps//4
+
+    pressures, temperatures = [], []
+    for density in tqdm(densities):
+        box_side = (num_particles/density)**(1/3)
+        box = md.Box(box_side, box_side, box_side)
+        state = md.State(num_particles).init_random((0, box_side), (0, 10))
+        state.init_grid(box)
+        state.velocities -= state.center_of_mass()[1]
+        state.set_temperature(init_temp)
+        sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
+                                   lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
+                                   box, init_temp, num_prep_steps)
+        sim.set_state_vars(("Pressure", lambda s: s.pressure),
+                           ("Temperature", lambda s: s.temperature()))
+        sim.simulate()
+        equilibration = len(time)//10 + num_prep_steps
+        temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
+        pressure = np.mean(sim.state_vars["Pressure"][equilibration:]) + density*temperature
+        pressures.append(pressure)
+        temperatures.append(temperature)
+    pressure = np.array(pressures)
+    temperatures = np.array(temperatures)
+
+    fig, ax = plt.subplots(1, figsize=(20, 7))
+    ax.plot(densities, pressure, '.', label="MD with virial formula")
+    ax.plot(densities, np.array(densities)*temperatures, label="Ideal gas law")
+    ax.grid()
+    ax.set_ylabel(r"$P$"), ax.set_xlabel(r"$\rho$")
+    ax.legend()
+    fig.tight_layout()
+
+    save_figure("2_3b")
+
+    plt.show()
+
+
+def molecular_dynamics_2_3c():
+    num_particles = 125
+    densities = np.linspace(0.4, 0.8, 40)
+    init_temp = 0.8
+    cutoff = 2.5
+
+    end_time = 1
+    dt = (10**-8/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
+    num_prep_steps = num_steps//4
+
+    pressures, temperatures = [], []
+    for density in tqdm(densities):
+        box_side = (num_particles/density)**(1/3)
+        box = md.Box(box_side, box_side, box_side)
+        state = md.State(num_particles).init_random((0, box_side), (0, 10))
+        state.init_grid(box)
+        state.velocities -= state.center_of_mass()[1]
+        state.set_temperature(init_temp)
+        sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
+                                   lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
+                                   box, init_temp, num_prep_steps)
+        sim.set_state_vars(("Pressure", lambda s: s.pressure),
+                           ("Temperature", lambda s: s.temperature()))
+        sim.simulate()
+        equilibration = len(time)//10 + num_prep_steps
+        temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
+        pressure = np.mean(sim.state_vars["Pressure"][equilibration:]) + density*temperature
+        pressures.append(pressure)
+        temperatures.append(temperature)
+    pressure = np.array(pressures)
+    temperatures = np.array(temperatures)
+
+    fig, ax = plt.subplots(1, figsize=(20, 7))
+    ax.plot(densities, pressure, '.')
+    ax.grid()
+    ax.set_ylabel(r"$P$"), ax.set_xlabel(r"$\rho$")
+    fig.tight_layout()
+
+    save_figure("2_3c")
+
+    plt.show()
 
