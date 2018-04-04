@@ -15,6 +15,7 @@ def force_coupled_sho(state) -> np.ndarray:
 
 
 def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
+    """Lennard-Jones force between all particles in state, for a cubic box"""
     force_mat = np.zeros(state.positions.shape)
     for i in range(state.positions.shape[1]):
         shift_by = state.positions[:, i, np.newaxis] - np.array([0.5*box_side]*state.dim)[:, np.newaxis]
@@ -23,7 +24,7 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
         dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
         dist_mat[dist_mat == 0] = np.inf
         dist_mat[dist_mat > cutoff] = np.inf
-        force_mat[:, i] = -(-24*(2/dist_mat**14 - 1/dist_mat**8)*separation_mat).sum(axis=1)
+        force_mat[:, i] = (24*(2/dist_mat**14 - 1/dist_mat**8)*separation_mat).sum(axis=1)
     return force_mat
 
 
@@ -36,7 +37,7 @@ def potential_energy_lennard_jones_mic(state, cutoff, box_side) -> float:
         dist_mat = np.sqrt((separation_mat**2).sum(axis=0))
         dist_mat[dist_mat == 0] = np.inf
         dist_mat[dist_mat > cutoff] = np.inf
-        pots = -4*(2*dist_mat**-12 - dist_mat**-6) + 4*(2*cutoff**-12 - cutoff**-6)
+        pots = 4*(2*dist_mat**-12 - dist_mat**-6) - 4*(2*cutoff**-12 - cutoff**-6)
         pot_energy[i] = pots.sum()
     return pot_energy.sum()
 
@@ -187,9 +188,8 @@ def molecular_dynamics1c():
 def molecular_dynamics2d():
 
     num_particles = 125
-    end_time = 1
-    dt = (10**-8/end_time)**(1/3)
-    print(dt)
+    end_time = 10
+    dt = (10**-10/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
 
@@ -197,10 +197,10 @@ def molecular_dynamics2d():
 
     state = md.State(num_particles).init_random((0, box.side(0)), (0, 10))
     state.velocities -= state.center_of_mass()[1]
-    state.set_temperature(3)
+    state.set_temperature(300)
     state.init_grid(box)
 
-    potential = lambda s: potential_energy_lennard_jones_mic(s, np.inf, box.side(0))
+    potential = lambda s: potential_energy_lennard_jones_mic(s, 2.5, box.side(0))
     force = lambda s: force_lennard_jones_mic(s, 2.5, box.side(0))
     sim = md.BoxedSimulator(state, md.VerletIntegrator, dt, num_steps, force, box)
     sim.set_state_vars(("Temperature", lambda s: s.temperature()),
@@ -215,5 +215,6 @@ def molecular_dynamics2d():
     #sim.simulate()
     #energy_start = (sim.state_vars["Kinetic"] + sim.state_vars["Potential"])[0]
     #plt.figure()
-    #plt.plot(time, (sim.state_vars["Kinetic"] + sim.state_vars["Potential"] - energy_start)/energy_start)
+    ##plt.plot(time, (sim.state_vars["Kinetic"] + sim.state_vars["Potential"] - energy_start)/energy_start)
+    #plt.plot(time, sim.state_vars["Temperature"])
     plt.show()

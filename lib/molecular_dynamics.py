@@ -289,8 +289,8 @@ class Visualizer:
         # initial scatter plot
         self._points, = ax.plot(xs, ys, zs, 'o', *args)
 
-        anim = animation.FuncAnimation(fig, self._update_cloud, frames=num_frames,
-                                       interval=interval, repeat=True)
+        anim = animation.FuncAnimation(fig, self._update_cloud, num_frames,
+                                       interval=interval, repeat=True, blit=True)
         return fig, ax, anim
 
     # Private
@@ -302,5 +302,5 @@ class Visualizer:
         zs = self._simulator.state().positions[2, :]
         self._points.set_data(np.array([xs, ys]))
         self._points.set_3d_properties(zs, 'z')
-        return self._points
+        return self._points,
 
