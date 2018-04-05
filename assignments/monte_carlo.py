@@ -2,7 +2,10 @@ import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 import lib.monte_carlo as monte_carlo
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = lambda *i, **kwargs: i[0]
 from matplotlib import rc
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 12})
 rc('text', usetex=True)

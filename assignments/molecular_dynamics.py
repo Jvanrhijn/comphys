@@ -3,7 +3,10 @@ import copy
 import itertools
 import lib.molecular_dynamics as md
 from decorators.decorators import *
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = lambda *i, **kwargs: i[0]
 from matplotlib import rc
 from matplotlib import cm
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 20})

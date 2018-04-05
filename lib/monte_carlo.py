@@ -2,7 +2,10 @@
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = lambda *i, **kwargs: i[0]
 from matplotlib.gridspec import GridSpec
 from matplotlib import rc
 import lib.util as util
