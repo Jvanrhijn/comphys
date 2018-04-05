@@ -1,4 +1,6 @@
 import math
+import copy
+import itertools
 import lib.molecular_dynamics as md
 from decorators.decorators import *
 from tqdm import tqdm
@@ -33,9 +35,19 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
     # Compute state variables
     potential_energy = 0.5*(4*(1/dist_mat**12 - 1/dist_mat**6) - 4*(1/cutoff**12 - 1/cutoff**6))
     state.potential_energy = potential_energy.sum()
-    pressure = 0.5*(force_mat*separation_mat).sum()/(3*box_side**3) #  Factor 1/2 to compensate for double-counting
+    pressure = 0.5*(force_mat*separation_mat).sum()/(3*box_side**3)  # Factor 1/2 to compensate for double-counting
     state.pressure = pressure
     return force
+
+
+def distribution_function(state, box_side, bins):
+    center = 0.5*box_side
+    # Apply mimimal image criterion
+    shift_by = state.positions - np.array([center]*state.dim)[:, np.newaxis]
+    shifted = (state.positions[:, :, np.newaxis] - shift_by[:, np.newaxis, :]).T % box_side
+    separation_mat = np.ones(shifted.shape)*center - shifted
+    dist_mat = np.linalg.norm(separation_mat, axis=2)
+    return np.histogram(dist_mat, bins=bins, normed=False)[0]/state.num_particles
 
 
 def molecular_dynamics_1_1a():
@@ -160,7 +172,7 @@ def molecular_dynamics_1_1c():
 
     speeds = np.array(list(itertools.chain.from_iterable(
         np.array([np.linalg.norm(state.velocities, axis=0) for state in sim.states][equilibration:]))))
-    fig, ax = plt.subplots(1, figsize=(20, 5))
+    fig, ax = plt.subplots(1, figsize=(20, 7))
     ax.hist(speeds, bins=50, normed=True)
     boltzmann = np.exp(-np.sort(speeds)**2/(2*temperature))
     boltzmann /= np.trapz(boltzmann, np.sort(speeds))
@@ -176,7 +188,7 @@ def molecular_dynamics_1_2d():
 
     num_particles = 125
     end_time = 10
-    dt = (10**-7/end_time)**(1/3)
+    dt = (10**-6/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
 
@@ -196,7 +208,6 @@ def molecular_dynamics_1_2d():
     sim.set_state_vars(("Temperature", lambda s: s.temperature()),
                        ("Kinetic", lambda s: s.kinetic_energy()),
                        ("Potential", lambda s: s.potential_energy))
-
 
     """
     vis = md.Visualizer(sim, inf_sim=True)
@@ -230,11 +241,11 @@ def molecular_dynamics_1_2d():
 
     equilibration = len(time)//10
     temp = np.mean(temperature[equilibration:])
-    print("Temperature T = {}".format(round(temp, 2)))
+    print("Temperature T = {:.2f}".format(temp))
 
     speeds = np.array(list(itertools.chain.from_iterable(
         np.array([abs(state.velocities[0, :]) for state in sim.states][equilibration:]))))
-    fig, ax = plt.subplots(1, figsize=(20, 5))
+    fig, ax = plt.subplots(1, figsize=(20, 7))
     ax.hist(speeds, bins=50, normed=True)
     boltzmann = np.exp(-np.sort(speeds)**2/(2*temp))  # Factor 3 in temp/3 needed to account for single-dimension
     boltzmann /= np.trapz(boltzmann, np.sort(speeds))
@@ -394,7 +405,7 @@ def molecular_dynamics_2_3c():
     cutoff = 2.5
 
     end_time = 1
-    dt = (10**-8/end_time)**(1/3)
+    dt = (10**-6/end_time)**(1/3)
     time = np.arange(dt, end_time, dt)
     num_steps = len(time)
     num_prep_steps = num_steps//4
@@ -417,9 +428,7 @@ def molecular_dynamics_2_3c():
         temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
         pressure = np.mean(sim.state_vars["Pressure"][equilibration:]) + density*temperature
         pressures.append(pressure)
-        temperatures.append(temperature)
     pressure = np.array(pressures)
-    temperatures = np.array(temperatures)
 
     fig, ax = plt.subplots(1, figsize=(20, 7))
     ax.plot(densities, pressure, '.')
@@ -430,4 +439,125 @@ def molecular_dynamics_2_3c():
     save_figure("2_3c")
 
     plt.show()
+
+
+def molecular_dynamics_2_4():
+    num_particles = 125
+    density = 0.8
+    init_temp = 2
+    cutoff = 2.5
+
+    end_time = 1
+    dt = (10**-8/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
+    num_prep_steps = num_steps//4
+
+    box_side = (num_particles/density)**(1/3)
+    box = md.Box(box_side, box_side, box_side)
+    state = md.State(num_particles).init_random((0, box_side), (0, 10))
+    state.init_grid(box)
+    state.velocities -= state.center_of_mass()[1]
+    state.set_temperature(init_temp)
+    sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
+                               lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
+                               box, init_temp, num_prep_steps)
+    sim.save = True
+    sim.set_state_vars(("Potential", lambda s: s.potential_energy),
+                       ("Temperature", lambda s: s.temperature()),
+                       ("Pressure", lambda s: s.pressure))
+    sim.simulate()
+
+    # Calculate distribution function
+    equilibration = len(time)//10 + num_prep_steps
+    dr = box_side/125  # arbitrary choice of bin size
+    bins = np.arange(dr, box_side/2, dr)
+    distr = 0
+    for idx, state in enumerate(sim.states[equilibration:]):
+        distr += distribution_function(state, box_side, bins=bins)
+    # divide distribution function by number of steps and number of particles
+    distr = distr/(num_steps - equilibration)/density
+
+    r = np.linspace(bins[0], bins[-1], len(distr))
+    norm_vol = 4/3*np.pi*((r + dr)**3 - r**3)
+
+    fig, ax = plt.subplots(1, figsize=(20, 7))
+    ax.plot(r/box_side, distr/norm_vol, 'o')
+    ax.set_xlabel(r"$r/L$"), ax.set_ylabel(r"$g(r)$")
+    ax.grid()
+
+    fig.tight_layout()
+    save_figure("2_4a")
+
+    # Compute average interaction energy:
+    interaction_energy = np.trapz(density*distr*(4*(1/r**12 - 1/r**6))*4*np.pi*r**2, r)
+    print("Average interaction energy: {:.2f}".format(interaction_energy))
+
+    # Compute average potential energy
+    potential_energy = np.mean(sim.state_vars["Potential"][equilibration:])
+    print("Average potential energy - distribution function:\n{0:.2f}\n".format(interaction_energy*num_particles/2))
+    print("Average potential energy - direct:\n{0:.2f}\n".format(potential_energy))
+
+    # Compute pressure
+    temperature = np.mean(sim.state_vars["Temperature"][equilibration:])
+    pressure = density*temperature - 0.5*np.trapz(density*distr*24*(2*r**-13 - r**-7)
+                                                                * r*r**2*4*np.pi, r)
+    pressure_direct = np.mean(sim.state_vars["Pressure"][equilibration:]) + density*temperature
+    print("Average pressure - distribution function:\n{0:.2f}\n".format(pressure))
+    print("Average pressure - direct:\n{0:.2f}\n".format(pressure_direct))
+
+    plt.show()
+
+
+def molecular_dynamics_2_4f():
+    num_particles = 125
+    init_temp = 2
+    cutoff = 2.5
+
+    end_time = 1
+    dt = (10**-8/end_time)**(1/3)
+    time = np.arange(dt, end_time, dt)
+    num_steps = len(time)
+    num_prep_steps = num_steps//4
+
+    equilibration = len(time)//10 + num_prep_steps
+    fig, ax = plt.subplots(1, figsize=(20, 7))
+
+    for density in [0.1, 0.8]:
+        box_side = (num_particles/density)**(1/3)
+        box = md.Box(box_side, box_side, box_side)
+        state = md.State(num_particles).init_random((0, box_side), (0, 10))
+        state.init_grid(box)
+        state.velocities -= state.center_of_mass()[1]
+        state.set_temperature(init_temp)
+        sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
+                                   lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
+                                   box, init_temp, num_prep_steps)
+        sim.save = True
+        sim.simulate()
+
+        # Calculate distribution function
+        dr = box_side/125  # arbitrary choice of bin size
+        bins = np.arange(dr, box_side/2, dr)
+        distr = 0
+        for idx, state in enumerate(sim.states[equilibration:]):
+            distr += distribution_function(state, box_side, bins=bins)
+        # divide distribution function by number of steps and number of particles
+        distr = distr/(num_steps - equilibration)/density
+
+        r = np.linspace(bins[0], bins[-1], len(distr))
+        norm_vol = 4/3*np.pi*((r + dr)**3 - r**3)
+
+        ax.plot(r/box_side, distr/norm_vol, 'o', label=r"$\rho = {}$".format(density))
+
+    ax.legend()
+    ax.set_xlabel(r"$r/L$"), ax.set_ylabel(r"$g(r)$")
+    ax.grid()
+    fig.tight_layout()
+
+    save_figure("2_4f")
+    plt.show()
+
+
+
 
