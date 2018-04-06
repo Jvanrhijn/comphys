@@ -8,7 +8,6 @@ try:
 except ImportError:
     tqdm = lambda *i, **kwargs: i[0]
 from matplotlib import rc
-from matplotlib import cm
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica'], 'size': 20})
 rc('text', usetex=True)
 
@@ -25,21 +24,20 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
     """Lennard-Jones force between all particles in state, for a cubic box"""
     center = 0.5*box_side
     # Apply mimimal image criterion
-    shift_by = state.positions - np.array([center]*state.dim)[:, np.newaxis]
-    shifted = (state.positions[:, :, np.newaxis] - shift_by[:, np.newaxis, :]).T % box_side
+    shifted = (state.positions[:, :, np.newaxis] - (state.positions
+                                                    - center*np.ones(state.dim)[:, np.newaxis])[:, np.newaxis, :]).T \
+        % box_side
     separation_mat = np.ones(shifted.shape)*center - shifted
-    dist_mat = np.linalg.norm(separation_mat, axis=2)
+    dist_mat = np.sqrt(np.einsum('ijk,ijk->ij', separation_mat, separation_mat, optimize='optimal'))
     # Kill self-interaction and apply cutoff radius
     np.fill_diagonal(dist_mat, np.inf)
     np.where(dist_mat > cutoff, np.inf, dist_mat)
     # Calculate f_ij and F_i
-    force_mat = (24*(2/dist_mat**14 - 1/dist_mat**8)[:, :, np.newaxis]*separation_mat)
-    force = force_mat.sum(axis=1).T
+    force = np.einsum('ij,ijk->ki',
+                      24*(2/dist_mat**14 - 1/dist_mat**8), separation_mat, optimize='optimal')
     # Compute state variables
-    potential_energy = 0.5*(4*(1/dist_mat**12 - 1/dist_mat**6) - 4*(1/cutoff**12 - 1/cutoff**6))
-    state.potential_energy = potential_energy.sum()
-    pressure = 0.5*(force_mat*separation_mat).sum()/(3*box_side**3)  # Factor 1/2 to compensate for double-counting
-    state.pressure = pressure
+    state.potential_energy = (2*(1/dist_mat**12 - 1/dist_mat**6) - 2*(1/cutoff**12 - 1/cutoff**6)).sum()
+    state.pressure = 12*(2/dist_mat**12 - 1/dist_mat**6).sum()/(3*box_side**3)
     return force
 
 
@@ -341,7 +339,7 @@ def molecular_dynamics_2_3a():
     sim = md.BoxedNVESimulator(state, md.VerletIntegrator, dt, num_steps,
                                lambda s: force_lennard_jones_mic(s, cutoff, box.side(0)),
                                box, init_temp, num_prep_steps)
-    sim.set_state_vars(("Pressure", lambda s: pressure_dev(s, cutoff, box)),
+    sim.set_state_vars(("Pressure", lambda s: s.pressure),
                        ("Temperature", lambda s: s.temperature()))
     sim.simulate()
 
