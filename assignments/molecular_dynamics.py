@@ -1,6 +1,7 @@
 import math
 import copy
 import itertools
+import numba
 import lib.molecular_dynamics as md
 from decorators.decorators import *
 try:
@@ -33,8 +34,9 @@ def force_lennard_jones_mic(state, cutoff, box_side) -> np.ndarray:
     np.fill_diagonal(dist_mat, np.inf)
     np.where(dist_mat > cutoff, np.inf, dist_mat)
     # Calculate f_ij and F_i
+    force_ij = 24*(2/dist_mat**14 - 1/dist_mat**8)
     force = np.einsum('ij,ijk->ki',
-                      24*(2/dist_mat**14 - 1/dist_mat**8), separation_mat, optimize='optimal')
+                      force_ij, separation_mat, optimize='optimal')
     # Compute state variables
     state.potential_energy = (2*(1/dist_mat**12 - 1/dist_mat**6) - 2*(1/cutoff**12 - 1/cutoff**6)).sum()
     state.pressure = 12*(2/dist_mat**12 - 1/dist_mat**6).sum()/(3*box_side**3)
@@ -251,7 +253,7 @@ def molecular_dynamics_1_2d():
     boltzmann = np.exp(-np.sort(speeds)**2/(2*temp))  # Factor 3 in temp/3 needed to account for single-dimension
     boltzmann /= np.trapz(boltzmann, np.sort(speeds))
     ax.plot(np.sort(speeds), boltzmann,
-            label=r"Boltzmann")  # must sort speeds to prevent crash, probably bug in matplotlib
+            label=r"Boltzmann", linewidth=5)  # must sort speeds to prevent crash, probably bug in matplotlib
     ax.set_xlabel(r"$|v_x|$"), ax.legend()
     save_figure("2d_iii")
 
@@ -491,7 +493,8 @@ def molecular_dynamics_2_4():
     save_figure("2_4a")
 
     # Compute average interaction energy:
-    interaction_energy = np.trapz(density*distr*(4*(1/r**12 - 1/r**6))*4*np.pi*r**2, r)
+    u = lambda x, Rc: 4*(1/x**12 - 1/x**6) - 4*(1/Rc**12 - 1/Rc**6)
+    interaction_energy = np.trapz(density*distr*u(r, cutoff)*4*np.pi*r**2, r)
     print("Average interaction energy: {:.2f}".format(interaction_energy))
 
     # Compute average potential energy
